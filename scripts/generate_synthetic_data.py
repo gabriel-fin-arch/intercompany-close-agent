@@ -244,8 +244,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seed", type=int, default=42, help="RNG seed (default: 42)")
     parser.add_argument("--pairs", type=int, default=26, help="Number of IC pairs to generate before anomalies")
+    parser.add_argument("--out-dir", type=Path, default=OUTPUT_DIR, help="Where to write the CSVs")
     args = parser.parse_args()
-    generate(seed=args.seed, pair_count=args.pairs)
+    generate(seed=args.seed, pair_count=args.pairs, out_dir=args.out_dir)
 
 
 if __name__ == "__main__":
