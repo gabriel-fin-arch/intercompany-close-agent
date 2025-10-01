@@ -27,6 +27,11 @@ AMOUNT_TOLERANCE = Decimal("0.05")
 # threshold, not a flat number.
 MATERIALITY_THRESHOLD = Decimal("1000.00")
 
+# Legs booked more than this many days apart get flagged for a timing gap,
+# even when the amounts line up perfectly -- a balance booked after the
+# other entity's cutoff is still worth a look, not just a rounding note.
+TIMING_TOLERANCE_DAYS = 2
+
 
 class MatchResult:
     """Everything the matching pass produced for one run."""
@@ -76,6 +81,20 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
             )
             continue
 
+        if len(legs) > 2:
+            net = sum((leg.amount for leg in legs), Decimal("0"))
+            exceptions.append(
+                ICException(
+                    reference=reference,
+                    exception_type=ExceptionType.DUPLICATE_REFERENCE,
+                    legs=legs,
+                    net_amount=net,
+                    materiality=_materiality_for(net),
+                    detected_reason=f"{len(legs)} legs share reference {reference}; expected exactly 2.",
+                )
+            )
+            continue
+
         leg_a, leg_b = legs[0], legs[1]
 
         if not _counterparties_consistent(leg_a, leg_b):
@@ -107,6 +126,23 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     materiality=_materiality_for(net),
                     detected_reason=(
                         f"{reference}: legs net to {net} instead of zero (tolerance is {AMOUNT_TOLERANCE})."
+                    ),
+                )
+            )
+            continue
+
+        day_gap = abs((leg_a.transaction_date - leg_b.transaction_date).days)
+        if day_gap > TIMING_TOLERANCE_DAYS:
+            exceptions.append(
+                ICException(
+                    reference=reference,
+                    exception_type=ExceptionType.TIMING_GAP,
+                    legs=legs,
+                    net_amount=net,
+                    materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
+                    detected_reason=(
+                        f"{reference}: legs are {day_gap} days apart ({leg_a.transaction_date} vs "
+                        f"{leg_b.transaction_date}), beyond the {TIMING_TOLERANCE_DAYS}-day cutoff tolerance."
                     ),
                 )
             )
