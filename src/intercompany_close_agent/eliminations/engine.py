@@ -9,26 +9,22 @@ for this project's scope, it's always the same standard elimination line.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from intercompany_close_agent.models.elimination import Elimination, JournalLine, JournalLineType
+from intercompany_close_agent.models.exception import ICException
 from intercompany_close_agent.models.ledger import ICTransaction
 
 ELIMINATION_ACCOUNT = "9999-IC-ELIM"
 
 
-def build_elimination(pair: tuple[ICTransaction, ICTransaction]) -> Elimination:
-    """Build a balanced elimination JE from one matched IC pair.
+def _receivable_and_payable(leg_a: ICTransaction, leg_b: ICTransaction) -> tuple[ICTransaction, ICTransaction]:
+    """Sort two legs of the same balance into (receivable leg, payable leg)."""
+    return (leg_a, leg_b) if leg_a.amount > 0 else (leg_b, leg_a)
 
-    One leg is positive (a receivable, as booked) and the other negative (a
-    payable) -- that's what "matched" means coming out of the matching
-    engine. Eliminating the balance means debiting whichever entity holds
-    the payable and crediting whichever entity holds the receivable, for
-    the same absolute amount, on the group elimination account.
-    """
-    leg_a, leg_b = pair
-    receivable_leg, payable_leg = (leg_a, leg_b) if leg_a.amount > 0 else (leg_b, leg_a)
-    amount = abs(receivable_leg.amount)
 
-    lines = [
+def _elimination_lines(payable_leg: ICTransaction, receivable_leg: ICTransaction, amount: Decimal) -> list[JournalLine]:
+    return [
         JournalLine(
             entity_code=payable_leg.entity_code,
             account_code=ELIMINATION_ACCOUNT,
@@ -43,6 +39,21 @@ def build_elimination(pair: tuple[ICTransaction, ICTransaction]) -> Elimination:
         ),
     ]
 
+
+def build_elimination(pair: tuple[ICTransaction, ICTransaction]) -> Elimination:
+    """Build a balanced elimination JE from one matched IC pair.
+
+    One leg is positive (a receivable, as booked) and the other negative (a
+    payable) -- that's what "matched" means coming out of the matching
+    engine. Eliminating the balance means debiting whichever entity holds
+    the payable and crediting whichever entity holds the receivable, for
+    the same absolute amount, on the group elimination account.
+    """
+    leg_a, leg_b = pair
+    receivable_leg, payable_leg = _receivable_and_payable(leg_a, leg_b)
+    amount = abs(receivable_leg.amount)
+    lines = _elimination_lines(payable_leg, receivable_leg, amount)
+
     narrative = (
         f"Eliminate intercompany balance {receivable_leg.reference}: "
         f"{payable_leg.entity_code} owed {receivable_leg.entity_code} {amount} {receivable_leg.currency}."
@@ -53,3 +64,35 @@ def build_elimination(pair: tuple[ICTransaction, ICTransaction]) -> Elimination:
 
 def build_eliminations(pairs: list[tuple[ICTransaction, ICTransaction]]) -> list[Elimination]:
     return [build_elimination(pair) for pair in pairs]
+
+
+def build_elimination_from_exception(
+    exc: ICException,
+    note: str = "",
+    override_amount: Decimal | None = None,
+) -> Elimination:
+    """Build an elimination JE from an exception's two legs.
+
+    Only ever called for AMOUNT_MISMATCH / TIMING_GAP exceptions -- the ones
+    where a genuine intercompany balance exists on both sides, it just
+    didn't net exactly to zero or landed outside the timing tolerance.
+    MISSING_COUNTERPARTY, DUPLICATE_REFERENCE and COUNTERPARTY_MISMATCH
+    exceptions never reach this without an explicit human decision on what
+    to book, since there's no unambiguous pair of legs to eliminate.
+    """
+    if len(exc.legs) != 2:
+        raise ValueError(f"cannot build an elimination from {len(exc.legs)} legs (reference {exc.reference})")
+
+    leg_a, leg_b = exc.legs
+    receivable_leg, payable_leg = _receivable_and_payable(leg_a, leg_b)
+    amount = override_amount if override_amount is not None else abs(receivable_leg.amount)
+    lines = _elimination_lines(payable_leg, receivable_leg, amount)
+
+    narrative = (
+        f"Eliminate intercompany balance {exc.reference} ({exc.exception_type.value}): "
+        f"{payable_leg.entity_code} owed {receivable_leg.entity_code} {amount} {receivable_leg.currency}."
+    )
+    if note:
+        narrative = f"{narrative} [{note}]"
+
+    return Elimination(reference=exc.reference, lines=lines, narrative=narrative)
