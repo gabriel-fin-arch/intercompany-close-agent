@@ -7,7 +7,7 @@ not just what ended up booked.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -28,4 +28,4 @@ class ReviewDecision(BaseModel):
         default=None,
         description="Only meaningful for action=edit -- the amount to eliminate instead of the raw residual.",
     )
-    decided_at: datetime = Field(default_factory=datetime.utcnow)
+    decided_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
