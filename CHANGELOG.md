@@ -22,3 +22,5 @@ All notable changes to this project are logged here.
   person's judgment; nothing is auto-eliminated past that point without an explicit decision.
 - CLI (typer): `generate-data` and `run`. `run` works fully offline and prints the reviewer
   worklist for anything pending human review.
+- Streamlit reviewer dashboard: run the pipeline, review the worklist, approve/reject/edit each
+  pending item, and see the finalized eliminations and audit trail.
