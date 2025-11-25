@@ -1,0 +1,120 @@
+# Data model
+
+All models are pydantic v2 (`src/intercompany_close_agent/models/`, plus
+`triage/models.py` for the triage-specific ones). Money is `Decimal`
+throughout -- `float` doesn't belong anywhere near a balance that has to
+net to exactly zero.
+
+## Master data
+
+**`Entity`** (`models/entity.py`) -- a legal entity in the group. The
+`interfaced` flag matters more than it looks: a non-interfaced entity's
+data is manually loaded, which is exactly where reference typos and
+re-keying slips creep in (see `data/synthetic/README.md`).
+
+## Ledger data
+
+**`TrialBalanceLine`** / **`ICTransaction`** (`models/ledger.py`) -- the
+two feeds the pipeline ingests. An `ICTransaction` is one *leg* of an
+intercompany balance, as booked by a single entity; a clean balance has
+exactly two legs (one per side) that net to zero.
+
+## Matching output
+
+**`ICException`** (`models/exception.py`) -- what's left over once clean
+pairs are pulled out. Deliberately free of anything an LLM produces: no
+confidence score, no narrative. Whether triage runs against Claude or the
+offline rule fallback, an `ICException` means the same thing either way --
+the matching engine that builds it never knows or cares which one is
+coming next.
+
+```python
+class ICException(BaseModel):
+    reference: str
+    exception_type: ExceptionType   # missing_counterparty | counterparty_mismatch
+                                     # | amount_mismatch | timing_gap | duplicate_reference
+    legs: list[ICTransaction]
+    net_amount: Decimal
+    materiality: Materiality        # low | high -- pure magnitude, not a judgment call
+    detected_reason: str            # plain-language, code-generated
+```
+
+## Triage output
+
+**`TriageJudgment`** / **`TriageResult`** (`triage/models.py`) -- what
+triage decides about one exception. `TriageJudgment` is the bare judgment
+(classification, confidence, rationale); `TriageResult` adds the
+`reference` back on. Split this way so the LLM's structured-output schema
+(`TriageJudgment`) never has to correctly echo back a reference string --
+the code sets that itself from the exception being triaged.
+
+```python
+class TriageJudgment(BaseModel):
+    classification: TriageClassification  # auto_resolvable | needs_human_judgment
+    confidence: float                     # 0.0-1.0
+    rationale: str
+
+class TriageResult(TriageJudgment):
+    reference: str
+```
+
+## Review output
+
+**`ReviewDecision`** (`models/review.py`) -- a human reviewer's decision on
+one exception. `override_amount` is only meaningful for `action=edit`, and
+`decided_at` defaults to the current UTC time so every decision carries its
+own timestamp without the caller having to remember to set one.
+
+```python
+class ReviewDecision(BaseModel):
+    reference: str
+    action: ReviewAction              # approve | reject | edit
+    reviewer_note: str = ""
+    override_amount: Decimal | None = None
+    decided_at: datetime
+```
+
+## Elimination output
+
+**`Elimination`** / **`JournalLine`** (`models/elimination.py`) -- the
+final output. Balance is enforced at the model level, not just checked
+after the fact:
+
+```python
+class Elimination(BaseModel):
+    reference: str
+    lines: list[JournalLine]
+    narrative: str = ""
+
+    @model_validator(mode="after")
+    def _check_balances(self) -> Elimination:
+        ...  # raises ValueError if debits != credits
+```
+
+Constructing an `Elimination` with unbalanced lines is a validation error,
+not a possible runtime state -- see `tests/test_eliminations.py::test_elimination_model_rejects_unbalanced_lines`.
+
+## How they connect
+
+```
+ICTransaction (x2, one per leg)
+      |
+      | matching/engine.py
+      v
+clean pair ---------------------> eliminations/engine.py -> Elimination
+      |
+      | (doesn't match cleanly)
+      v
+  ICException
+      |
+      | triage/{llm,rules}.py
+      v
+ TriageResult
+      |
+      +-- auto_resolvable -------> eliminations/engine.py -> Elimination
+      |
+      +-- needs_human_judgment --> human_review (interrupt) --> ReviewDecision
+                                          |
+                                          +-- approve/edit --> eliminations/engine.py -> Elimination
+                                          +-- reject -------> no elimination
+```
