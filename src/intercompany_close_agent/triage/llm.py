@@ -14,6 +14,7 @@ import os
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 
+from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ICException
 from intercompany_close_agent.triage.models import TriageJudgment, TriageResult
 
@@ -29,6 +30,11 @@ immaterial and there is no control concern. A missing counterparty booking, \
 a balance booked against the wrong entity, or a reference shared by more \
 than two legs should always need human judgment -- no exceptions, regardless \
 of the dollar amount.
+
+If any entity involved is flagged as manually loaded, lower your confidence \
+accordingly: that data was keyed in by hand rather than arriving through a \
+system interface, so an otherwise-immaterial residual is less likely to mean \
+what it appears to mean.
 
 Write a short, specific rationale a reviewer could act on without having to \
 re-derive your reasoning from scratch."""
@@ -49,12 +55,12 @@ def _build_chain():
     return prompt | structured_llm
 
 
-def _describe(exc: ICException) -> str:
+def _describe(exc: ICException, entities: dict[str, Entity] | None = None) -> str:
     legs_desc = "; ".join(
         f"{leg.entity_code} vs {leg.counterparty_code}: {leg.amount} {leg.currency} on {leg.transaction_date}"
         for leg in exc.legs
     )
-    return (
+    description = (
         f"reference={exc.reference}\n"
         f"exception_type={exc.exception_type.value}\n"
         f"materiality={exc.materiality.value}\n"
@@ -63,10 +69,21 @@ def _describe(exc: ICException) -> str:
         f"legs: {legs_desc}"
     )
 
+    if entities:
+        manual = sorted(
+            code
+            for code in exc.involved_entity_codes
+            if code in entities and not entities[code].interfaced
+        )
+        if manual:
+            description = f"{description}\nmanually_loaded_entities: {', '.join(manual)}"
 
-def triage_exception(exc: ICException) -> TriageResult:
+    return description
+
+
+def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None) -> TriageResult:
     chain = _build_chain()
-    judgment = chain.invoke({"exception_details": _describe(exc)})
+    judgment = chain.invoke({"exception_details": _describe(exc, entities)})
     if not isinstance(judgment, TriageJudgment):
         judgment = TriageJudgment.model_validate(judgment)
     return TriageResult(reference=exc.reference, **judgment.model_dump())
