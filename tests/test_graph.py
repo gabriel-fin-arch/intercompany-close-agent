@@ -6,6 +6,7 @@ not mocked -- so these tests double as a guard against LangGraph API drift.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 from intercompany_close_agent.graph.graph import resume_close, run_close
@@ -90,6 +91,68 @@ def test_rejecting_a_decision_excludes_it_from_eliminations(monkeypatch):
     rejected_reference = pending[0]["reference"]
     eliminated_references = {e.reference for e in final["eliminations"]}
     assert rejected_reference not in eliminated_references
+
+
+def test_approving_a_missing_counterparty_with_an_amount_books_it(monkeypatch):
+    """A one-legged exception can only be booked if the reviewer supplies the amount."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-5")
+
+    one_legged = {exc.reference for exc in result["exceptions"] if len(exc.legs) == 1}
+    assert one_legged, "the synthetic dataset should contain at least one missing counterparty"
+    target = sorted(one_legged)[0]
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    decisions = []
+    for item in pending:
+        if item["reference"] == target:
+            decisions.append(
+                {
+                    "reference": target,
+                    "action": ReviewAction.APPROVE.value,
+                    "reviewer_note": "confirmed with the affiliate",
+                    "override_amount": "5000.00",
+                }
+            )
+        else:
+            decisions.append({"reference": item["reference"], "action": ReviewAction.REJECT.value})
+
+    final = resume_close(graph, config, decisions)
+
+    booked = {e.reference for e in final["eliminations"]}
+    assert target in booked
+
+    elimination = next(e for e in final["eliminations"] if e.reference == target)
+    assert all(line.amount == Decimal("5000.00") for line in elimination.lines)
+    assert "confirmed with the affiliate" in elimination.narrative
+
+
+def test_approving_a_missing_counterparty_without_an_amount_is_not_booked(monkeypatch):
+    """Approval alone isn't enough when there's no amount to book."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-6")
+
+    one_legged = {exc.reference for exc in result["exceptions"] if len(exc.legs) == 1}
+    target = sorted(one_legged)[0]
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    decisions = [
+        {"reference": item["reference"], "action": ReviewAction.APPROVE.value}
+        for item in pending
+    ]
+
+    final = resume_close(graph, config, decisions)
+
+    booked = {e.reference for e in final["eliminations"]}
+    assert target not in booked
+    # and the audit trail says why, rather than the item silently vanishing
+    assert any(target in entry and "not booked automatically" in entry for entry in final["audit_trail"])
 
 
 def test_missing_counterparty_never_auto_resolves(monkeypatch):
