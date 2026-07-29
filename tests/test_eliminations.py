@@ -10,6 +10,7 @@ import pytest
 from intercompany_close_agent.eliminations.engine import (
     build_elimination,
     build_elimination_from_exception,
+    build_elimination_from_known_leg,
     build_eliminations,
 )
 from intercompany_close_agent.models.elimination import Elimination, JournalLine, JournalLineType
@@ -137,6 +138,37 @@ def test_build_elimination_from_exception_rejects_wrong_leg_count():
     )
     with pytest.raises(ValueError, match="cannot build an elimination"):
         build_elimination_from_exception(exc)
+
+
+def test_known_leg_receivable_credits_the_booking_entity():
+    # US01 booked a receivable from DE01; DE01 never booked its side.
+    leg = _leg("US01", "DE01", "REF-8", "1000.00")
+    elim = build_elimination_from_known_leg(leg, Decimal("1000.00"))
+
+    debit = next(line for line in elim.lines if line.line_type == JournalLineType.DEBIT)
+    credit = next(line for line in elim.lines if line.line_type == JournalLineType.CREDIT)
+    assert debit.entity_code == "DE01"  # the one that owes
+    assert credit.entity_code == "US01"  # the one that's owed
+    assert debit.amount == credit.amount == Decimal("1000.00")
+
+
+def test_known_leg_payable_swaps_the_sides():
+    # Same pair, but the surviving leg is the payable side.
+    leg = _leg("US01", "DE01", "REF-9", "-1000.00")
+    elim = build_elimination_from_known_leg(leg, Decimal("1000.00"))
+
+    debit = next(line for line in elim.lines if line.line_type == JournalLineType.DEBIT)
+    credit = next(line for line in elim.lines if line.line_type == JournalLineType.CREDIT)
+    assert debit.entity_code == "US01"
+    assert credit.entity_code == "DE01"
+
+
+def test_known_leg_uses_the_reviewer_supplied_amount_not_the_booked_one():
+    leg = _leg("US01", "DE01", "REF-10", "1000.00")
+    elim = build_elimination_from_known_leg(leg, Decimal("750.00"), note="agreed with DE01 controller")
+
+    assert all(line.amount == Decimal("750.00") for line in elim.lines)
+    assert "agreed with DE01 controller" in elim.narrative
 
 
 def test_against_the_real_synthetic_dataset():

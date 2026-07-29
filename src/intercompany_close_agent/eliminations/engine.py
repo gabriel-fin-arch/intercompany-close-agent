@@ -99,27 +99,35 @@ def build_elimination_from_exception(
 
 
 def build_elimination_from_known_leg(known_leg: ICTransaction, amount: Decimal, note: str = "") -> Elimination:
-    """Build an elimination JE for a MISSING_COUNTERPARTY or DUPLICATE_REFERENCE
-    exception a human has approved.
+    """Build an elimination JE for an approved MISSING_COUNTERPARTY exception.
 
     There's no second system-of-record leg to derive an amount from here --
-    that's the whole reason these exception types always need a human. The
+    that's the whole reason this exception type always needs a human. The
     reviewer supplies the amount (via ReviewDecision.override_amount); this
-    just books it against the counterparty the known leg already names.
+    books it against the counterparty the known leg already names.
+
+    A positive known leg is a receivable, so the entity that booked it gets
+    the credit and the counterparty it named gets the debit. A negative one
+    is a payable, so the two swap.
     """
-    receivable_leg, payable_leg = (
-        (known_leg, None) if known_leg.amount > 0 else (None, known_leg)
-    )
-    if receivable_leg is not None:
-        payable_entity = known_leg.counterparty_code
-        receivable_entity = known_leg.entity_code
+    if known_leg.amount > 0:
+        receivable_entity, payable_entity = known_leg.entity_code, known_leg.counterparty_code
     else:
-        payable_entity = known_leg.entity_code
-        receivable_entity = known_leg.counterparty_code
+        receivable_entity, payable_entity = known_leg.counterparty_code, known_leg.entity_code
 
     lines = [
-        JournalLine(entity_code=payable_entity, account_code=ELIMINATION_ACCOUNT, line_type=JournalLineType.DEBIT, amount=amount),
-        JournalLine(entity_code=receivable_entity, account_code=ELIMINATION_ACCOUNT, line_type=JournalLineType.CREDIT, amount=amount),
+        JournalLine(
+            entity_code=payable_entity,
+            account_code=ELIMINATION_ACCOUNT,
+            line_type=JournalLineType.DEBIT,
+            amount=amount,
+        ),
+        JournalLine(
+            entity_code=receivable_entity,
+            account_code=ELIMINATION_ACCOUNT,
+            line_type=JournalLineType.CREDIT,
+            amount=amount,
+        ),
     ]
 
     narrative = (
