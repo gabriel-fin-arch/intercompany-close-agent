@@ -10,14 +10,14 @@ or cares which one is coming.
 from __future__ import annotations
 
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 from intercompany_close_agent.models.ledger import ICTransaction
 
 
-class ExceptionType(str, Enum):
+class ExceptionType(StrEnum):
     MISSING_COUNTERPARTY = "missing_counterparty"
     COUNTERPARTY_MISMATCH = "counterparty_mismatch"
     AMOUNT_MISMATCH = "amount_mismatch"
@@ -25,7 +25,7 @@ class ExceptionType(str, Enum):
     DUPLICATE_REFERENCE = "duplicate_reference"
 
 
-class Materiality(str, Enum):
+class Materiality(StrEnum):
     """Coarse magnitude banding, decided purely by a dollar threshold.
 
     Not the same thing as "auto-resolvable vs needs judgment" -- materiality
