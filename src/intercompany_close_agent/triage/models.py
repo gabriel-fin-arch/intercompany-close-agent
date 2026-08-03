@@ -8,12 +8,12 @@ one produced it.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class TriageClassification(str, Enum):
+class TriageClassification(StrEnum):
     AUTO_RESOLVABLE = "auto_resolvable"
     NEEDS_HUMAN_JUDGMENT = "needs_human_judgment"
 
