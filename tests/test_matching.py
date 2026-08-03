@@ -15,7 +15,13 @@ from intercompany_close_agent.models.exception import ExceptionType, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
 
 
-def _leg(entity: str, counterparty: str, reference: str, amount: str, txn_date: date = date(2025, 9, 30)) -> ICTransaction:
+def _leg(
+    entity: str,
+    counterparty: str,
+    reference: str,
+    amount: str,
+    txn_date: date = date(2025, 9, 30),
+) -> ICTransaction:
     return ICTransaction(
         entity_code=entity,
         counterparty_code=counterparty,

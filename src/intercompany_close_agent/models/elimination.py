@@ -10,12 +10,12 @@ cleared -- anything still uncertain belongs in an ICException, not here.
 from __future__ import annotations
 
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
 
 
-class JournalLineType(str, Enum):
+class JournalLineType(StrEnum):
     DEBIT = "debit"
     CREDIT = "credit"
 
