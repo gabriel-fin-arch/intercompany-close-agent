@@ -87,7 +87,10 @@ def _render_eliminations(eliminations) -> None:
         with st.expander(f"{elim.reference}"):
             st.write(elim.narrative)
             for line in elim.lines:
-                st.text(f"  {line.line_type.value.upper():>6}  {line.entity_code:<6}  {line.amount}  ({line.account_code})")
+                st.text(
+                    f"  {line.line_type.value.upper():>6}  {line.entity_code:<6}  "
+                    f"{line.amount}  ({line.account_code})"
+                )
 
 
 if final is not None:
