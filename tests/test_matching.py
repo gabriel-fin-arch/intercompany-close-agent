@@ -120,6 +120,34 @@ def test_timing_within_tolerance_is_clean():
     assert len(result.clean_pairs) == 1
 
 
+def test_currency_mismatch_is_never_netted():
+    """Two legs in different currencies must not be netted at an implicit 1:1."""
+    legs = [
+        ICTransaction(
+            entity_code="US01",
+            counterparty_code="DE01",
+            reference="REF-FX",
+            amount=Decimal("1000.00"),
+            currency="USD",
+            transaction_date=date(2025, 9, 30),
+        ),
+        ICTransaction(
+            entity_code="DE01",
+            counterparty_code="US01",
+            reference="REF-FX",
+            amount=Decimal("-1000.00"),
+            currency="EUR",
+            transaction_date=date(2025, 9, 30),
+        ),
+    ]
+    result = match_transactions(legs)
+
+    # amounts net to zero, so without the currency check this would look clean
+    assert result.clean_pairs == []
+    assert len(result.exceptions) == 1
+    assert result.exceptions[0].exception_type == ExceptionType.CURRENCY_MISMATCH
+
+
 def test_duplicate_reference_flagged():
     legs = [
         _leg("US01", "DE01", "REF-10", "1000.00"),

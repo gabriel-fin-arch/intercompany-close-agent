@@ -7,7 +7,7 @@ is deciding what it should never be allowed to decide on its own.
 
 ## The rule
 
-Three exception types are **never** auto-resolved, no matter how small the
+Four exception types are **never** auto-resolved, no matter how small the
 dollar amount:
 
 | Exception type | Why it's always a human call |
@@ -15,6 +15,7 @@ dollar amount:
 | `missing_counterparty` | Nothing is wrong with an *amount* here -- a booking simply doesn't exist. Auto-resolving this means inventing a transaction that was never recorded. That's not a matching problem, it's a "someone needs to go find out what happened" problem. |
 | `counterparty_mismatch` | The balance landed against the wrong legal entity. Silently reassigning it might net the group total to the right number, but it would misstate which entity actually owes what -- which matters for local statutory filings, transfer pricing, and legal entity-level results, not just the consolidated view. |
 | `duplicate_reference` | More than two legs share a reference. There's no way to know which pairing is correct without more information than the ledger data itself provides. Guessing wrong here means eliminating the wrong balance while leaving the real one standing. |
+| `currency_mismatch` | The two legs are denominated in different currencies. Netting them means applying an implicit 1:1 rate between, say, EUR and USD -- and FX translation is deliberately out of scope here, so there is no rate to apply. The amounts can look like they reconcile perfectly and still be meaningless. |
 
 Everything else -- an amount that's off by more than tolerance, a booking
 that landed outside the timing window -- *can* be auto-resolved, but only
