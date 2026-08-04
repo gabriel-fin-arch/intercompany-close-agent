@@ -7,7 +7,7 @@
           |
         ingest
           |
-       normalize
+      reconcile  ---------------- reconciliation/tieout.py (deterministic)
           |
         match  ------------------- matching/engine.py (deterministic)
           |
@@ -28,17 +28,35 @@ themselves. For a project this size that's simpler to follow than
 `Annotated[list, operator.add]`, and it's explicit about what each node
 actually changed.
 
-## Why matching and detect-exceptions are one node, not two
+## Reconcile before you eliminate
 
-The original shape of this project called `match` and `detect_exceptions`
-out as separate stages. In practice, `matching/engine.py`'s
-`match_transactions()` is a single pure function: it groups transaction legs
-by reference and, for each group, either produces a clean pair or an
-`ICException` -- there's no meaningful boundary to split the two into
-separate graph nodes without introducing an artificial hand-off of the same
-data. The graph's `match` node calls that one function and stores both
-outputs (`clean_pairs` and `exceptions`) in state. Splitting it further
-would have padded the graph without changing what it does.
+`reconcile` runs before any matching and answers a question matching can't:
+does the intercompany subledger agree with what each entity's general
+ledger says its intercompany position is? It sums every entity's IC legs
+and compares that to the entity's `IC_RECEIVABLE` + `IC_PAYABLE` control
+accounts on the trial balance.
+
+The distinction matters. A single balance failing to match its counterparty
+is a reconciliation item -- someone chases one transaction. A control
+account that doesn't tie means the subledger and the GL disagree about the
+*totals*, so every elimination built off that subledger is suspect. That's
+worth knowing before the run starts, not after it produces entries.
+
+It deliberately does **not** trip the `human_review` interrupt. A tie-out
+break is an entity-level data problem for someone to chase offline, not a
+per-balance judgment call, so routing it into the reviewer worklist would
+mix two different kinds of work. It's reported in the audit trail, carried
+in state as `tb_variances`, and surfaced by both the CLI and the dashboard.
+
+## Why matching and exception detection are one node, not two
+
+`matching/engine.py`'s `match_transactions()` is a single pure function: it
+groups transaction legs by reference and, for each group, either produces a
+clean pair or an `ICException`. There's no meaningful boundary to split
+that into two graph nodes without inventing a hand-off of the same data
+between them, so the `match` node calls it once and stores both outputs
+(`clean_pairs` and `exceptions`) in state. Splitting it would have padded
+the graph without changing what it does.
 
 ## State shape
 
@@ -47,6 +65,8 @@ class CloseState(TypedDict, total=False):
     entities: list[Entity]
     trial_balance: list[TrialBalanceLine]
     ic_transactions: list[ICTransaction]
+
+    tb_variances: list[TrialBalanceVariance]
 
     clean_pairs: list[tuple[ICTransaction, ICTransaction]]
     exceptions: list[ICException]
