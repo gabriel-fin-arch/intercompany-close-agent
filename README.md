@@ -117,11 +117,12 @@ details.
 
 ## 4. Where I put the human in the loop -- and why
 
-Four exception types are **never** auto-resolved, regardless of dollar
+Five exception types are **never** auto-resolved, regardless of dollar
 amount: a missing counterparty booking, a balance booked against the wrong
-entity, a reference shared by more than two legs, and two legs denominated
-in different currencies. None of them is really a question about *how much*
--- they're questions about *who* booked *what*, or in *what units* -- and no
+entity, an entity booked as its own counterparty, a reference shared by more
+than two legs, and two legs denominated in different currencies. None of
+them is really a question about *how much* -- they're questions about *who*
+booked *what*, or in *what units* -- and no
 rule engine or model should get to quietly decide that's fine because the
 number looks small. A currency mismatch is the sharpest example: the amounts
 can net to exactly zero and still mean nothing, because netting them applies
