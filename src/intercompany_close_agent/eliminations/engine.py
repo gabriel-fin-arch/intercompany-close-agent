@@ -67,7 +67,12 @@ def build_elimination(pair: tuple[ICTransaction, ICTransaction]) -> Elimination:
 
 
 def build_eliminations(pairs: list[tuple[ICTransaction, ICTransaction]]) -> list[Elimination]:
-    return [build_elimination(pair) for pair in pairs]
+    """Build eliminations for every matched pair that has something to eliminate.
+
+    A pair that nets to zero on both legs is already gone at group level --
+    posting a zero-value entry for it would balance perfectly and say nothing.
+    """
+    return [build_elimination(pair) for pair in pairs if abs(pair[0].amount) > 0]
 
 
 def build_elimination_from_exception(
