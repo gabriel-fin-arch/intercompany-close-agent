@@ -24,6 +24,10 @@ _ALWAYS_NEEDS_JUDGMENT = {
     ExceptionType.MISSING_COUNTERPARTY,
     ExceptionType.DUPLICATE_REFERENCE,
     ExceptionType.COUNTERPARTY_MISMATCH,
+    # Two legs in different currencies can't be netted without an FX rate,
+    # and FX translation is out of scope here -- so there is nothing to
+    # auto-resolve, only someone to tell.
+    ExceptionType.CURRENCY_MISMATCH,
 }
 
 # Confidence penalty applied when a non-interfaced (manually loaded) entity
