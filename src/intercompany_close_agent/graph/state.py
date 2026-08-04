@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
+from intercompany_close_agent.models.control import TrialBalanceVariance
 from intercompany_close_agent.models.elimination import Elimination
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ICException
@@ -24,6 +25,8 @@ class CloseState(TypedDict, total=False):
     entities: list[Entity]
     trial_balance: list[TrialBalanceLine]
     ic_transactions: list[ICTransaction]
+
+    tb_variances: list[TrialBalanceVariance]
 
     clean_pairs: list[tuple[ICTransaction, ICTransaction]]
     exceptions: list[ICException]

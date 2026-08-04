@@ -19,6 +19,15 @@ two feeds the pipeline ingests. An `ICTransaction` is one *leg* of an
 intercompany balance, as booked by a single entity; a clean balance has
 exactly two legs (one per side) that net to zero.
 
+## Reconciliation output
+
+**`TrialBalanceVariance`** (`models/control.py`) -- one entity's
+intercompany position as the subledger sees it, next to what its trial
+balance control accounts say. Produced by the `reconcile` node before any
+matching happens. `within_tolerance` is precomputed rather than left to the
+caller, so the CLI, the dashboard and the audit trail can't disagree about
+what counts as a break.
+
 ## Matching output
 
 **`ICException`** (`models/exception.py`) -- what's left over once clean
