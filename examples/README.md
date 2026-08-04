@@ -12,6 +12,11 @@ worklist, including a `counterparty_mismatch`, a `timing_gap`, several
 `missing_counterparty` cases, and an `amount_mismatch` -- one real example
 of each exception type the matching engine detects.
 
+Several entries also carry a note that one of the entities involved keys
+its data in by hand -- that's `ZA01`, the group's non-interfaced entity,
+and triage surfaces it because a manually loaded balance is a weaker
+starting point than one that arrived through a system interface.
+
 Note that a few `missing_counterparty` pairs show up twice, from both
 sides (e.g. `LOAN-INT-2025-1010` and `LOAN_INT-2025-1010`) -- that's the
 `non_interfaced_noise` anomaly from the synthetic data generator doing
