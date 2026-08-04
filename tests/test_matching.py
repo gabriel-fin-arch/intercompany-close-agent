@@ -120,6 +120,26 @@ def test_timing_within_tolerance_is_clean():
     assert len(result.clean_pairs) == 1
 
 
+def test_an_entity_cannot_be_its_own_counterparty():
+    """Self-dealing balances net to zero and would silently pass as clean."""
+    legs = [
+        _leg("US01", "US01", "REF-SELF", "1000.00"),
+        _leg("US01", "US01", "REF-SELF", "-1000.00"),
+    ]
+    result = match_transactions(legs)
+
+    assert result.clean_pairs == []
+    assert len(result.exceptions) == 1
+    assert result.exceptions[0].exception_type == ExceptionType.SELF_DEALING
+
+
+def test_self_dealing_caught_even_on_a_single_leg():
+    legs = [_leg("DE01", "DE01", "REF-SELF-1", "500.00")]
+    result = match_transactions(legs)
+
+    assert result.exceptions[0].exception_type == ExceptionType.SELF_DEALING
+
+
 def test_currency_mismatch_is_never_netted():
     """Two legs in different currencies must not be netted at an implicit 1:1."""
     legs = [
