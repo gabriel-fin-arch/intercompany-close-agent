@@ -87,6 +87,12 @@ def test_build_elimination_order_independent():
     }
 
 
+def test_zero_value_pairs_produce_no_entry():
+    """There's nothing to eliminate, so posting a zero entry would be noise."""
+    pairs = [(_leg("US01", "DE01", "REF-Z", "0.00"), _leg("DE01", "US01", "REF-Z", "0.00"))]
+    assert build_eliminations(pairs) == []
+
+
 def test_build_eliminations_batch():
     pairs = [
         (_leg("US01", "DE01", "REF-3", "100.00"), _leg("DE01", "US01", "REF-3", "-100.00")),

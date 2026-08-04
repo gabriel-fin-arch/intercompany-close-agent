@@ -72,6 +72,29 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
     exceptions: list[ICException] = []
 
     for reference, legs in by_reference.items():
+        self_dealt = [leg for leg in legs if leg.entity_code == leg.counterparty_code]
+        if self_dealt:
+            # An entity cannot hold an intercompany balance with itself. Netting
+            # this would produce an entry that debits and credits the same
+            # entity -- balanced, meaningless, and hiding a mapping error in
+            # the source data.
+            net = sum((leg.amount for leg in legs), Decimal("0"))
+            exceptions.append(
+                ICException(
+                    reference=reference,
+                    exception_type=ExceptionType.SELF_DEALING,
+                    legs=legs,
+                    net_amount=net,
+                    materiality=_materiality_for(max(abs(leg.amount) for leg in legs)),
+                    detected_reason=(
+                        f"{reference}: {self_dealt[0].entity_code} is booked as its own "
+                        f"counterparty, which points at a mapping error rather than a real "
+                        f"intercompany balance."
+                    ),
+                )
+            )
+            continue
+
         if len(legs) == 1:
             leg = legs[0]
             exceptions.append(
