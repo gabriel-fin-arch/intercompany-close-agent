@@ -64,6 +64,13 @@ in ways that matter:
   or a reference shared by more than two legs are control questions, not
   amount questions -- the dollar value doesn't make them safe to wave
   through. See `docs/human-in-the-loop.md` for the full reasoning.
+- **You tie out before you eliminate.** Before matching anything, the
+  pipeline checks each entity's IC subledger against its intercompany
+  control accounts on the trial balance. A balance that won't match its
+  counterparty is one reconciliation item; a control account that won't
+  tie means the subledger and the GL disagree about the totals, and every
+  elimination built off it is suspect. Those are different problems and
+  the tool treats them differently.
 - **US GAAP / SOX context shapes what "done" means.** An elimination that
   nets to zero on paper still needs an audit trail a controls reviewer can
   follow: what was eliminated, based on what evidence, approved by whom.
@@ -73,15 +80,16 @@ in ways that matter:
 ## 3. Agent architecture
 
 ```
-ingest -> normalize -> match -> triage -> human_review -> finalize
+ingest -> reconcile -> match -> triage -> human_review -> finalize
 ```
 
 Built as a [LangGraph](https://github.com/langchain-ai/langgraph)
 `StateGraph`. Two design decisions carry the whole project:
 
-**The LLM does not do arithmetic.** Matching two IC legs, checking a
-tolerance, and building a balanced elimination entry are all deterministic
-Python (`matching/`, `eliminations/`) with full unit test coverage,
+**The LLM does not do arithmetic.** Tying the subledger to the trial
+balance, matching two IC legs, checking a tolerance, and building a
+balanced elimination entry are all deterministic Python
+(`reconciliation/`, `matching/`, `eliminations/`) with full unit coverage,
 including a net-zero invariant enforced at the model level. The model never
 sees a number it's asked to add up -- it only ever classifies an exception
 (`auto_resolvable` vs. `needs_human_judgment`) and writes the rationale a
@@ -126,10 +134,11 @@ easy to find and easy to disagree with. The full reasoning, including what
 
 ```
 src/intercompany_close_agent/
-  models/        pydantic domain models (Entity, ICTransaction, ICException, Elimination, ReviewDecision, ...)
-  ingest/        CSV loaders + chart-of-accounts mapping
-  matching/      deterministic IC matching engine            <- unit tested
-  eliminations/  elimination JE generation                   <- unit tested
+  models/          pydantic domain models (Entity, ICTransaction, ICException, Elimination, ReviewDecision, ...)
+  ingest/          CSV loaders + chart-of-accounts mapping
+  reconciliation/  trial balance control-account tie-out     <- unit tested
+  matching/        deterministic IC matching engine          <- unit tested
+  eliminations/    elimination JE generation                 <- unit tested
   triage/        LLM triage (Claude) + offline rule fallback
   graph/         LangGraph state, nodes, and the compiled graph
   synthetic/     synthetic dataset generator

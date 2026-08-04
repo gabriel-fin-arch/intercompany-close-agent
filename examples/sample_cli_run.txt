@@ -3,9 +3,14 @@ Loaded 7 entities, 51 IC transaction legs
 
 === Audit trail ===
   - ingested 51 IC transaction legs
-  - normalized ledger data
+  - control account tie-out: 1 of 7 entities do not tie
+  -   IE01: subledger 123487.71 vs TB 124691.93 (variance -1204.22)
   - matched 17 clean pairs, 14 exceptions
   - triaged 14 exceptions
+
+=== Control account tie-out: 1 entity(ies) do not tie ===
+  IE01: IC subledger 123487.71 vs trial balance 124691.93 (variance -1204.22)
+  These are GL-vs-subledger data breaks, not per-balance reconciliation items.
 
 === Reviewer worklist (14 item(s) need a human decision) ===
   [HIGH] PRODUCT-2025-1001 -- counterparty_mismatch
