@@ -23,6 +23,20 @@ rounding difference on a $2M intercompany loan doesn't need a human. A
 $400,000 amount mismatch does, even though it's "just" an `amount_mismatch`
 and not a control-flagged type.
 
+## Who booked it counts, not just how much
+
+Materiality isn't the only input. If either side of the balance is an
+entity that loads manually rather than through a system interface, triage
+takes confidence off the result -- and an exception that would otherwise
+have been auto-resolved gets escalated instead. The reasoning is the same
+one every group controller applies informally: a number that was keyed in
+by hand is a number that could have been keyed in wrong, and "small" is a
+weaker argument when the data path itself is the weak link.
+
+That's why `Entity.interfaced` isn't decoration. It's read at triage time
+(`triage/rules.py`, and passed to the model in `triage/llm.py`), and it can
+change the outcome on its own.
+
 That split is implemented identically in both triage paths --
 `triage/rules.py` (the offline fallback) and the system prompt in
 `triage/llm.py` (what Claude is told when it runs the live triage) -- so
