@@ -83,13 +83,13 @@ _ONE_MANUAL = {
 }
 
 
-def test_manual_entity_lowers_confidence_on_an_escalated_exception():
+def test_manual_entity_is_named_in_the_rationale():
+    """A reviewer should be told why this one is in front of them."""
     exc = _exc(ExceptionType.AMOUNT_MISMATCH, Materiality.HIGH)
-    baseline = triage_exception(exc, _INTERFACED)
-    with_manual = triage_exception(exc, _ONE_MANUAL)
+    result = triage_exception(exc, _ONE_MANUAL)
 
-    assert with_manual.confidence < baseline.confidence
-    assert "DE01" in with_manual.rationale
+    assert "DE01" in result.rationale
+    assert "by hand" in result.rationale
 
 
 def test_manual_entity_escalates_what_would_otherwise_auto_resolve():
@@ -98,10 +98,10 @@ def test_manual_entity_escalates_what_would_otherwise_auto_resolve():
     # all-interfaced: immaterial residual is safe to auto-resolve
     assert triage_exception(exc, _INTERFACED).classification == TriageClassification.AUTO_RESOLVABLE
 
-    # same exception, but one side was keyed in by hand -> not safe enough
+    # same exception, but one side was keyed in by hand -> policy says no
     escalated = triage_exception(exc, _ONE_MANUAL)
     assert escalated.classification == TriageClassification.NEEDS_HUMAN_JUDGMENT
-    assert "manually" in escalated.rationale
+    assert "regardless of size" in escalated.rationale
 
 
 def test_entities_are_optional_and_default_to_the_old_behaviour():
