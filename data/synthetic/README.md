@@ -44,7 +44,7 @@ EPM, or similar) fed by a source ERP:
   | Anomaly | What it looks like |
   |---|---|
   | `fx_mismatch` | Counterparty converted the same balance at a slightly different rate |
-  | `timing` | Counterparty booked its leg after the group's close cutoff |
+  | `timing` | Counterparty booked its leg after the group's close cutoff, pushing it into the next accounting period |
   | `missing_counterparty` | Counterparty never booked a mirror leg at all |
   | `wrong_counterparty_code` | Counterparty booked the leg against the wrong group entity |
   | `rounding` | A cents-level rounding difference, inside a sane tolerance |
