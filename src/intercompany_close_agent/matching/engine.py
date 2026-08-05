@@ -14,23 +14,30 @@ from decimal import Decimal
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
 
-# How close two legs' amounts need to be, in USD, to count as the same
-# balance. Anything inside this is a rounding difference, not a real break.
-# REVIEW: 5 cents is a reasonable starting point for a synthetic dataset; a
-# real close would likely tie this to the group's own rounding policy.
-AMOUNT_TOLERANCE = Decimal("0.05")
+# Matching tolerance. Two components, because a flat absolute number treats a
+# USD 500 balance and a USD 250,000 one as if they carried the same risk:
+#
+#   floor  -- sub-unit differences are arithmetic noise at any size. USD 1.00.
+#   rate   -- 0.01% of the larger leg, so tolerance scales with the balance.
+#
+# The effective tolerance is whichever is larger. Sized so genuine FX drift
+# still fails: converting the same balance at two rates typically moves it by
+# tenths of a percent upward, an order of magnitude past 0.01%.
+AMOUNT_TOLERANCE_FLOOR = Decimal("1.00")
+AMOUNT_TOLERANCE_RATE = Decimal("0.0001")
 
-# Below this absolute USD residual, an exception is flagged LOW materiality.
-# Above it, HIGH. This drives nothing on its own -- it's raw input for the
-# triage step's later auto-resolvable / needs-judgment call.
-# REVIEW: a real group would size this off its own SOX materiality
-# threshold, not a flat number.
-MATERIALITY_THRESHOLD = Decimal("1000.00")
+# Above this residual an exception is banded HIGH, below it LOW. This is an
+# *operational* threshold, not a statutory one, and deliberately much tighter
+# than audit materiality would be for a group this size: an intercompany break
+# is a signal that a process failed somewhere, and a controller wants to see
+# that well before it becomes a misstatement risk. The banding is only an
+# input to triage -- it decides nothing on its own.
+MATERIALITY_THRESHOLD = Decimal("5000.00")
 
-# Legs booked more than this many days apart get flagged for a timing gap,
-# even when the amounts line up perfectly -- a balance booked after the
-# other entity's cutoff is still worth a look, not just a rounding note.
-TIMING_TOLERANCE_DAYS = 2
+
+def amount_tolerance_for(amount: Decimal) -> Decimal:
+    """Tolerance applicable to a balance of this size."""
+    return max(AMOUNT_TOLERANCE_FLOOR, abs(amount) * AMOUNT_TOLERANCE_RATE)
 
 
 class MatchResult:
@@ -55,6 +62,22 @@ def _materiality_for(amount: Decimal) -> Materiality:
 
 def _counterparties_consistent(a: ICTransaction, b: ICTransaction) -> bool:
     return a.entity_code == b.counterparty_code and b.entity_code == a.counterparty_code
+
+
+def _accounting_period(leg: ICTransaction) -> tuple[int, int]:
+    """The (year, month) this leg lands in.
+
+    Elapsed days between two bookings is the wrong question. Two legs eight
+    days apart inside the same month both make it into the same close and
+    consolidate fine; two legs one day apart across a month end do not. What
+    matters is which period each side falls into, not the gap between them.
+    Assumes calendar monthly periods, which is what this group reports on.
+    """
+    return leg.transaction_date.year, leg.transaction_date.month
+
+
+def _period_label(leg: ICTransaction) -> str:
+    return leg.transaction_date.strftime("%Y-%m")
 
 
 def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
@@ -168,7 +191,8 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
             continue
 
         net = leg_a.amount + leg_b.amount
-        if abs(net) > AMOUNT_TOLERANCE:
+        tolerance = amount_tolerance_for(max(abs(leg_a.amount), abs(leg_b.amount)))
+        if abs(net) > tolerance:
             exceptions.append(
                 ICException(
                     reference=reference,
@@ -177,14 +201,14 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     net_amount=net,
                     materiality=_materiality_for(net),
                     detected_reason=(
-                        f"{reference}: legs net to {net} instead of zero (tolerance is {AMOUNT_TOLERANCE})."
+                        f"{reference}: legs net to {net} instead of zero "
+                        f"(tolerance for a balance this size is {tolerance})."
                     ),
                 )
             )
             continue
 
-        day_gap = abs((leg_a.transaction_date - leg_b.transaction_date).days)
-        if day_gap > TIMING_TOLERANCE_DAYS:
+        if _accounting_period(leg_a) != _accounting_period(leg_b):
             exceptions.append(
                 ICException(
                     reference=reference,
@@ -193,8 +217,9 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     net_amount=net,
                     materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
                     detected_reason=(
-                        f"{reference}: legs are {day_gap} days apart ({leg_a.transaction_date} vs "
-                        f"{leg_b.transaction_date}), beyond the {TIMING_TOLERANCE_DAYS}-day cutoff tolerance."
+                        f"{reference}: {leg_a.entity_code} booked in "
+                        f"{_period_label(leg_a)} but {leg_b.entity_code} booked in "
+                        f"{_period_label(leg_b)}; the balance straddles the close cutoff."
                     ),
                 )
             )
