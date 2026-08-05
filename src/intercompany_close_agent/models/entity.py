@@ -29,8 +29,10 @@ class Entity(BaseModel):
         description=(
             "Whether the entity's trial balance loads automatically from the source ERP. "
             "Non-interfaced entities are loaded manually, which is exactly why they carry "
-            "more risk of timing and mapping errors -- and why the triage step treats them "
-            "with a lower baseline confidence."
+            "more risk of timing and mapping errors. Triage reads this: an exception "
+            "involving a manually loaded entity gets a confidence penalty, and one that "
+            "would otherwise have been auto-resolved is escalated instead "
+            "(see triage/rules.py)."
         ),
     )
 

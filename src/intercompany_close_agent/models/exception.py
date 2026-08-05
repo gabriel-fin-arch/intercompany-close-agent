@@ -49,5 +49,15 @@ class ICException(BaseModel):
     detected_reason: str = Field(description="Plain-language, code-generated explanation of what the matcher found.")
 
     @property
-    def entity_codes(self) -> list[str]:
-        return [leg.entity_code for leg in self.legs]
+    def involved_entity_codes(self) -> set[str]:
+        """Every entity named by this exception, on either side of the balance.
+
+        Includes counterparty codes, not just the entities that actually
+        booked a leg -- for a missing counterparty booking, the entity that
+        didn't book anything is precisely the one worth knowing about.
+        """
+        codes: set[str] = set()
+        for leg in self.legs:
+            codes.add(leg.entity_code)
+            codes.add(leg.counterparty_code)
+        return codes

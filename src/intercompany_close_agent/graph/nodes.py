@@ -55,7 +55,11 @@ def match(state: CloseState) -> dict:
 
 
 def triage(state: CloseState) -> dict:
-    results = triage_all(state["exceptions"])
+    # Entity master data goes in so triage can weigh who booked the balance,
+    # not just what the numbers say: a manually loaded entity's data carries
+    # more risk than one that interfaces straight from the source ERP.
+    entities_by_code = {entity.code: entity for entity in state.get("entities", [])}
+    results = triage_all(state["exceptions"], entities_by_code)
     return {
         "triage_results": results,
         "audit_trail": state["audit_trail"] + [f"triaged {len(results)} exceptions"],

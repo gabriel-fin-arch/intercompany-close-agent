@@ -42,7 +42,7 @@ def test_uses_llm_when_configured(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setenv("ANTHROPIC_MODEL", "test-model")
 
-    def fake_llm_triage(exc: ICException) -> TriageResult:
+    def fake_llm_triage(exc: ICException, entities=None) -> TriageResult:
         return TriageResult(
             reference=exc.reference,
             classification=TriageClassification.NEEDS_HUMAN_JUDGMENT,
@@ -61,7 +61,7 @@ def test_falls_back_to_rules_when_llm_call_fails(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setenv("ANTHROPIC_MODEL", "test-model")
 
-    def broken_llm_triage(exc: ICException) -> TriageResult:
+    def broken_llm_triage(exc: ICException, entities=None) -> TriageResult:
         raise RuntimeError("simulated network failure")
 
     monkeypatch.setattr("intercompany_close_agent.triage.llm.triage_exception", broken_llm_triage)

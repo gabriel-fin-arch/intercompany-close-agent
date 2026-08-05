@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
 from intercompany_close_agent.triage.models import TriageClassification
@@ -65,3 +66,51 @@ def test_low_materiality_timing_gap_is_auto_resolvable():
 def test_result_keeps_the_exception_reference():
     result = triage_exception(_exc(ExceptionType.AMOUNT_MISMATCH, Materiality.LOW, reference="REF-XYZ"))
     assert result.reference == "REF-XYZ"
+
+
+# --- entity risk profile ---------------------------------------------------
+# The fixtures above involve US01 and DE01, so these build an entity index
+# where one of them is manually loaded and check that it actually changes the
+# outcome -- the whole point of tracking the interfaced flag.
+
+_INTERFACED = {
+    "US01": Entity(code="US01", name="Test US", region="US", local_currency="USD", interfaced=True),
+    "DE01": Entity(code="DE01", name="Test DE", region="EMEA", local_currency="EUR", interfaced=True),
+}
+_ONE_MANUAL = {
+    "US01": _INTERFACED["US01"],
+    "DE01": Entity(code="DE01", name="Test DE", region="EMEA", local_currency="EUR", interfaced=False),
+}
+
+
+def test_manual_entity_lowers_confidence_on_an_escalated_exception():
+    exc = _exc(ExceptionType.AMOUNT_MISMATCH, Materiality.HIGH)
+    baseline = triage_exception(exc, _INTERFACED)
+    with_manual = triage_exception(exc, _ONE_MANUAL)
+
+    assert with_manual.confidence < baseline.confidence
+    assert "DE01" in with_manual.rationale
+
+
+def test_manual_entity_escalates_what_would_otherwise_auto_resolve():
+    exc = _exc(ExceptionType.AMOUNT_MISMATCH, Materiality.LOW)
+
+    # all-interfaced: immaterial residual is safe to auto-resolve
+    assert triage_exception(exc, _INTERFACED).classification == TriageClassification.AUTO_RESOLVABLE
+
+    # same exception, but one side was keyed in by hand -> not safe enough
+    escalated = triage_exception(exc, _ONE_MANUAL)
+    assert escalated.classification == TriageClassification.NEEDS_HUMAN_JUDGMENT
+    assert "manually" in escalated.rationale
+
+
+def test_entities_are_optional_and_default_to_the_old_behaviour():
+    exc = _exc(ExceptionType.AMOUNT_MISMATCH, Materiality.LOW)
+    assert triage_exception(exc).classification == TriageClassification.AUTO_RESOLVABLE
+
+
+def test_counterparty_side_counts_even_without_a_booked_leg():
+    """A missing counterparty booking should still surface the absent entity."""
+    exc = _exc(ExceptionType.AMOUNT_MISMATCH, Materiality.HIGH)
+    # DE01 only ever appears as the counterparty on the first leg
+    assert "DE01" in exc.involved_entity_codes
