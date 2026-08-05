@@ -123,3 +123,24 @@ def test_duplicate_reference_flagged():
     result = match_transactions(legs)
     assert len(result.exceptions) == 1
     assert result.exceptions[0].exception_type == ExceptionType.DUPLICATE_REFERENCE
+
+
+def test_against_the_real_synthetic_dataset():
+    """Sanity check against the generator's actual output, not just hand-built fixtures."""
+    from pathlib import Path
+
+    from intercompany_close_agent.ingest.loaders import load_ic_transactions
+
+    csv_path = Path(__file__).resolve().parent.parent / "data" / "synthetic" / "ic_ledger.csv"
+    transactions = load_ic_transactions(csv_path)
+
+    result = match_transactions(transactions)
+
+    # every leg is accounted for, either in a clean pair or an exception
+    legs_in_pairs = len(result.clean_pairs) * 2
+    legs_in_exceptions = sum(len(exc.legs) for exc in result.exceptions)
+    assert legs_in_pairs + legs_in_exceptions == len(transactions)
+
+    # the dataset was generated with real anomalies -- there should be some of both
+    assert len(result.clean_pairs) > 0
+    assert len(result.exceptions) > 0
