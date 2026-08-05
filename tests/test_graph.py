@@ -9,7 +9,7 @@ from __future__ import annotations
 from decimal import Decimal
 from pathlib import Path
 
-from intercompany_close_agent.graph.graph import resume_close, run_close
+from intercompany_close_agent.graph.graph import build_graph, resume_close, run_close
 from intercompany_close_agent.ingest.loaders import load_ic_transactions, load_trial_balance
 from intercompany_close_agent.models.exception import ExceptionType
 from intercompany_close_agent.models.review import ReviewAction
@@ -153,6 +153,45 @@ def test_approving_a_missing_counterparty_without_an_amount_is_not_booked(monkey
     assert target not in booked
     # and the audit trail says why, rather than the item silently vanishing
     assert any(target in entry and "not booked automatically" in entry for entry in final["audit_trail"])
+
+
+def test_every_checkpointed_type_is_declared_to_the_serializer(monkeypatch):
+    """Types that land in a checkpoint have to be declared, or resume breaks.
+
+    LangGraph currently allows anything and only warns; a future release
+    blocks it, which would break resume -- the one path a reviewer depends
+    on. Asserting on the configuration rather than on the warning, because
+    the warning is emitted once per process and any earlier test swallows it.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    allowlist = build_graph().checkpointer.serde._allowed_msgpack_modules
+    assert allowlist is not True, "an explicit allowlist is the point; True means 'allow anything'"
+
+    # Walk a real paused state and check nothing in it is missing from the list.
+    entities, trial_balance, transactions = _load_real_data()
+    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-serde")
+
+    declared = {name for _module, name in allowlist}
+    seen: set[str] = set()
+
+    def walk(value):
+        if isinstance(value, list | tuple | set):
+            for item in value:
+                walk(item)
+        elif isinstance(value, dict):
+            for item in value.values():
+                walk(item)
+        elif type(value).__module__.startswith("intercompany_close_agent"):
+            seen.add(type(value).__name__)
+            if hasattr(value, "__dict__"):
+                walk(vars(value))
+
+    walk({k: v for k, v in result.items() if k != "__interrupt__"})
+
+    assert seen, "the paused state should contain our own types"
+    assert seen <= declared, f"undeclared in _CHECKPOINTED_TYPES: {sorted(seen - declared)}"
 
 
 def test_missing_counterparty_never_auto_resolves(monkeypatch):
