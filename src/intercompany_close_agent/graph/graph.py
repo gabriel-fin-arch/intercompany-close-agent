@@ -1,6 +1,6 @@
 """Wires the close pipeline into a LangGraph StateGraph.
 
-ingest -> normalize -> match -> triage -> human_review -> finalize
+ingest -> reconcile -> match -> triage -> human_review -> finalize
 
 human_review is the one node that can pause the whole run: if triage found
 anything that needs a human's judgment, it calls LangGraph's native
@@ -20,7 +20,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 
-from intercompany_close_agent.graph.nodes import finalize, human_review, ingest, match, normalize, triage
+from intercompany_close_agent.graph.nodes import finalize, human_review, ingest, match, reconcile, triage
 from intercompany_close_agent.graph.state import CloseState
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLine
@@ -29,15 +29,15 @@ from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLi
 def build_graph():
     graph = StateGraph(CloseState)
     graph.add_node("ingest", ingest)
-    graph.add_node("normalize", normalize)
+    graph.add_node("reconcile", reconcile)
     graph.add_node("match", match)
     graph.add_node("triage", triage)
     graph.add_node("human_review", human_review)
     graph.add_node("finalize", finalize)
 
     graph.add_edge(START, "ingest")
-    graph.add_edge("ingest", "normalize")
-    graph.add_edge("normalize", "match")
+    graph.add_edge("ingest", "reconcile")
+    graph.add_edge("reconcile", "match")
     graph.add_edge("match", "triage")
     graph.add_edge("triage", "human_review")
     graph.add_edge("human_review", "finalize")

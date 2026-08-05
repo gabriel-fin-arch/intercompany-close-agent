@@ -70,6 +70,17 @@ def run(
     for line in result["audit_trail"]:
         typer.echo(f"  - {line}")
 
+    breaks = [v for v in result.get("tb_variances", []) if not v.within_tolerance]
+    if breaks:
+        typer.echo("")
+        typer.echo(f"=== Control account tie-out: {len(breaks)} entity(ies) do not tie ===")
+        for variance in breaks:
+            typer.echo(
+                f"  {variance.entity_code}: IC subledger {variance.ledger_total} vs "
+                f"trial balance {variance.trial_balance_total} (variance {variance.variance})"
+            )
+        typer.echo("  These are GL-vs-subledger data breaks, not per-balance reconciliation items.")
+
     if "__interrupt__" in result:
         pending = result["__interrupt__"][0].value["pending_review"]
         typer.echo("")

@@ -76,6 +76,19 @@ col2.metric("Exceptions", n_exceptions)
 col3.metric("Pending review", n_pending if final is None else 0)
 col4.metric("Eliminations finalized", n_eliminations)
 
+tb_breaks = [v for v in result.get("tb_variances", []) if not v.within_tolerance]
+if tb_breaks:
+    st.warning(
+        f"Control account tie-out: {len(tb_breaks)} entity(ies) where the IC subledger "
+        f"doesn't agree with the trial balance. These are GL-vs-subledger data breaks, "
+        f"not per-balance reconciliation items."
+    )
+    for variance in tb_breaks:
+        st.text(
+            f"  {variance.entity_code}: subledger {variance.ledger_total} vs "
+            f"TB {variance.trial_balance_total} (variance {variance.variance})"
+        )
+
 st.subheader("Audit trail")
 for line in display_state["audit_trail"]:
     st.text(f"- {line}")

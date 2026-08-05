@@ -197,11 +197,39 @@ def build_ic_ledger_rows(pairs: list[ICPair], rng: random.Random, anomaly_rate: 
     return rows
 
 
-def build_trial_balance_rows(rng: random.Random) -> list[dict]:
+def build_trial_balance_rows(rng: random.Random, ic_rows: list[dict]) -> list[dict]:
+    """Build the trial balance, with the IC control accounts derived from the ledger.
+
+    The intercompany receivable and payable accounts aren't random: in a real
+    close they're the general ledger's own view of the same balances that sit
+    in the intercompany subledger, so the two have to agree. Everything else
+    on the trial balance is filler -- nothing in this project reads it.
+
+    One entity is then deliberately knocked out of balance, because a tie-out
+    check that can never fail isn't a check.
+    """
+    ic_receivable: dict[str, Decimal] = {e.code: Decimal("0") for e in ENTITIES}
+    ic_payable: dict[str, Decimal] = {e.code: Decimal("0") for e in ENTITIES}
+
+    for row in ic_rows:
+        amount = Decimal(row["amount"])
+        bucket = ic_receivable if amount > 0 else ic_payable
+        bucket[row["entity_code"]] += amount
+
+    # A posting that reached the GL but never made it into the IC subledger --
+    # the everyday cause of a control account that won't tie at close.
+    broken_entity = rng.choice([e.code for e in ENTITIES])
+    ic_receivable[broken_entity] += (Decimal(rng.randrange(100_000, 900_000)) / 100).quantize(Decimal("1.00"))
+
     rows: list[dict] = []
     for entity in ENTITIES:
         for account_code, account_name in TB_ACCOUNTS:
-            balance = (Decimal(rng.randrange(-50_000_000, 200_000_000)) / 100).quantize(Decimal("1.00"))
+            if account_code == "1000-IC-REC":
+                balance = ic_receivable[entity.code]
+            elif account_code == "2000-IC-PAY":
+                balance = ic_payable[entity.code]
+            else:
+                balance = (Decimal(rng.randrange(-50_000_000, 200_000_000)) / 100).quantize(Decimal("1.00"))
             rows.append(
                 {
                     "entity_code": entity.code,
@@ -226,7 +254,7 @@ def generate(seed: int = 42, pair_count: int = 26, out_dir: Path = OUTPUT_DIR) -
 
     ic_pairs = generate_ic_pairs(rng, pair_count)
     ic_rows = build_ic_ledger_rows(ic_pairs, rng)
-    tb_rows = build_trial_balance_rows(rng)
+    tb_rows = build_trial_balance_rows(rng, ic_rows)
 
     _write_csv(
         out_dir / "ic_ledger.csv",

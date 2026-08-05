@@ -24,6 +24,15 @@ EPM, or similar) fed by a source ERP:
   table sits between the source ERP's account codes and the consolidation
   tool's structure.
 
+  The two intercompany accounts (`1000-IC-REC` and `2000-IC-PAY`) are
+  **not** random: they're derived from the IC ledger below, because in a
+  real close the GL's view of intercompany and the intercompany subledger
+  are two records of the same balances and have to agree. One entity is
+  then deliberately knocked out of balance -- a posting that reached the GL
+  but never made it into the subledger, which is the everyday cause of a
+  control account that won't tie at close. The `reconcile` step catches it.
+  Every other account on the trial balance is filler; nothing reads it.
+
 - **`ic_ledger.csv`** -- the intercompany ledger. Every genuine intercompany
   balance is booked twice: once by the entity that owns the transaction,
   once by its counterparty (a management fee, a product transfer, a

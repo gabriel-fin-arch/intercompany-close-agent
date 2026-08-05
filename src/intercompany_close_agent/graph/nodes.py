@@ -21,6 +21,7 @@ from intercompany_close_agent.eliminations.engine import (
 from intercompany_close_agent.graph.state import CloseState
 from intercompany_close_agent.matching.engine import match_transactions
 from intercompany_close_agent.models.review import ReviewAction, ReviewDecision
+from intercompany_close_agent.reconciliation.tieout import out_of_tolerance, reconcile_to_trial_balance
 from intercompany_close_agent.triage.models import TriageClassification
 from intercompany_close_agent.triage.node import triage_all
 
@@ -36,12 +37,32 @@ def ingest(state: CloseState) -> dict:
     return {"audit_trail": state.get("audit_trail", []) + [f"ingested {n_legs} IC transaction legs"]}
 
 
-def normalize(state: CloseState) -> dict:
-    # COA mapping already happened in the loader (ingest/loaders.py). This
-    # stage exists so the graph's shape says explicitly "we normalized
-    # before matching" -- a real system might do FX translation or entity
-    # eliminations-scope filtering here.
-    return {"audit_trail": state["audit_trail"] + ["normalized ledger data"]}
+def reconcile(state: CloseState) -> dict:
+    """Tie the IC subledger to the trial balance control accounts.
+
+    Deliberately does not stop the run. A control-account variance is an
+    entity-level data problem for someone to chase, not a per-balance
+    judgment call, so it's reported and carried forward rather than routed
+    into the human_review interrupt -- the reviewer worklist stays about
+    individual balances, and this stays visible in the audit trail.
+    """
+    variances = reconcile_to_trial_balance(state["ic_transactions"], state["trial_balance"])
+    breaks = out_of_tolerance(variances)
+
+    trail = state["audit_trail"]
+    if breaks:
+        trail = trail + [
+            f"control account tie-out: {len(breaks)} of {len(variances)} entities do not tie"
+        ]
+        trail = trail + [
+            f"  {v.entity_code}: subledger {v.ledger_total} vs TB {v.trial_balance_total}"
+            f" (variance {v.variance})"
+            for v in breaks
+        ]
+    else:
+        trail = trail + [f"control account tie-out: all {len(variances)} entities tie"]
+
+    return {"tb_variances": variances, "audit_trail": trail}
 
 
 def match(state: CloseState) -> dict:
