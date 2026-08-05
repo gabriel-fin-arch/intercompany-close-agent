@@ -1,10 +1,14 @@
 """Deterministic elimination journal entry generation.
 
 Takes the clean pairs the matching engine already cleared and turns each one
-into a balanced elimination JE. The receivable side is credited off and the
-payable side is debited off, both on the group's intercompany elimination
-account -- which GL account that maps to at the entity level doesn't matter
-for this project's scope, it's always the same standard elimination line.
+into a balanced elimination JE.
+
+The entry clears the same control accounts the tie-out reads: the entity
+that owes gets its intercompany payable debited, and the entity that's owed
+gets its intercompany receivable credited. Booking both sides to a generic
+"eliminations" account would balance just as well, but it would leave the
+IC control accounts standing at group level -- which is precisely what an
+elimination is supposed to remove, and precisely what reconciliation/ checks.
 """
 
 from __future__ import annotations
@@ -14,8 +18,7 @@ from decimal import Decimal
 from intercompany_close_agent.models.elimination import Elimination, JournalLine, JournalLineType
 from intercompany_close_agent.models.exception import ICException
 from intercompany_close_agent.models.ledger import ICTransaction
-
-ELIMINATION_ACCOUNT = "9999-IC-ELIM"
+from intercompany_close_agent.reconciliation.tieout import IC_PAYABLE_ACCOUNT, IC_RECEIVABLE_ACCOUNT
 
 
 def _receivable_and_payable(leg_a: ICTransaction, leg_b: ICTransaction) -> tuple[ICTransaction, ICTransaction]:
@@ -23,17 +26,18 @@ def _receivable_and_payable(leg_a: ICTransaction, leg_b: ICTransaction) -> tuple
     return (leg_a, leg_b) if leg_a.amount > 0 else (leg_b, leg_a)
 
 
-def _elimination_lines(payable_leg: ICTransaction, receivable_leg: ICTransaction, amount: Decimal) -> list[JournalLine]:
+def _elimination_lines(payable_entity: str, receivable_entity: str, amount: Decimal) -> list[JournalLine]:
+    """Debit the payable off the entity that owes, credit the receivable off the entity that's owed."""
     return [
         JournalLine(
-            entity_code=payable_leg.entity_code,
-            account_code=ELIMINATION_ACCOUNT,
+            entity_code=payable_entity,
+            account_code=IC_PAYABLE_ACCOUNT,
             line_type=JournalLineType.DEBIT,
             amount=amount,
         ),
         JournalLine(
-            entity_code=receivable_leg.entity_code,
-            account_code=ELIMINATION_ACCOUNT,
+            entity_code=receivable_entity,
+            account_code=IC_RECEIVABLE_ACCOUNT,
             line_type=JournalLineType.CREDIT,
             amount=amount,
         ),
@@ -52,7 +56,7 @@ def build_elimination(pair: tuple[ICTransaction, ICTransaction]) -> Elimination:
     leg_a, leg_b = pair
     receivable_leg, payable_leg = _receivable_and_payable(leg_a, leg_b)
     amount = abs(receivable_leg.amount)
-    lines = _elimination_lines(payable_leg, receivable_leg, amount)
+    lines = _elimination_lines(payable_leg.entity_code, receivable_leg.entity_code, amount)
 
     narrative = (
         f"Eliminate intercompany balance {receivable_leg.reference}: "
@@ -86,7 +90,7 @@ def build_elimination_from_exception(
     leg_a, leg_b = exc.legs
     receivable_leg, payable_leg = _receivable_and_payable(leg_a, leg_b)
     amount = override_amount if override_amount is not None else abs(receivable_leg.amount)
-    lines = _elimination_lines(payable_leg, receivable_leg, amount)
+    lines = _elimination_lines(payable_leg.entity_code, receivable_leg.entity_code, amount)
 
     narrative = (
         f"Eliminate intercompany balance {exc.reference} ({exc.exception_type.value}): "
@@ -115,20 +119,7 @@ def build_elimination_from_known_leg(known_leg: ICTransaction, amount: Decimal, 
     else:
         receivable_entity, payable_entity = known_leg.counterparty_code, known_leg.entity_code
 
-    lines = [
-        JournalLine(
-            entity_code=payable_entity,
-            account_code=ELIMINATION_ACCOUNT,
-            line_type=JournalLineType.DEBIT,
-            amount=amount,
-        ),
-        JournalLine(
-            entity_code=receivable_entity,
-            account_code=ELIMINATION_ACCOUNT,
-            line_type=JournalLineType.CREDIT,
-            amount=amount,
-        ),
-    ]
+    lines = _elimination_lines(payable_entity, receivable_entity, amount)
 
     narrative = (
         f"Eliminate intercompany balance {known_leg.reference} (human-supplied amount, "

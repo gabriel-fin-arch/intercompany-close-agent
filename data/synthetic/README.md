@@ -50,6 +50,7 @@ EPM, or similar) fed by a source ERP:
   | `rounding` | A cents-level rounding difference, inside a sane tolerance |
   | `sign_flip` | Counterparty booked a payable as a receivable (or vice versa) |
   | `non_interfaced_noise` | A manually-loaded entity re-keyed the reference with a typo |
+  | `local_currency` | An affiliate reported in its own local currency instead of the group's USD |
 
   Everything that *isn't* broken should match cleanly by
   `counterparty_code` + `reference` + `amount` within a small tolerance --

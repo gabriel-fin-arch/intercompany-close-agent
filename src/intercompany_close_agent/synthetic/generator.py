@@ -167,6 +167,20 @@ def anomaly_non_interfaced_noise(rows: list[dict], rng: random.Random) -> list[d
     return rows
 
 
+def anomaly_local_currency(rows: list[dict], rng: random.Random) -> list[dict]:
+    """The counterparty reported in its own local currency instead of USD.
+
+    The amount still looks plausible, which is what makes this one nasty:
+    netted at an implicit 1:1 it would appear to reconcile.
+    """
+    by_code = {e.code: e for e in ENTITIES}
+    entity = by_code.get(rows[1]["entity_code"])
+    if entity is None or entity.local_currency == "USD":
+        return rows
+    rows[1]["currency"] = entity.local_currency
+    return rows
+
+
 ANOMALY_INJECTORS = {
     "fx_mismatch": anomaly_fx_mismatch,
     "timing": anomaly_timing,
@@ -175,6 +189,7 @@ ANOMALY_INJECTORS = {
     "rounding": anomaly_rounding,
     "sign_flip": anomaly_sign_flip,
     "non_interfaced_noise": anomaly_non_interfaced_noise,
+    "local_currency": anomaly_local_currency,
 }
 
 

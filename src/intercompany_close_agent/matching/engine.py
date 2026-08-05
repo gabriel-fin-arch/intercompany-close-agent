@@ -123,6 +123,27 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
             )
             continue
 
+        if leg_a.currency != leg_b.currency:
+            # Netting these would mean applying an implicit 1:1 rate between two
+            # different currencies. FX translation is out of scope for this
+            # project, so there is no rate to apply and no honest way to net
+            # them -- it goes to a human, whatever the amounts look like.
+            exceptions.append(
+                ICException(
+                    reference=reference,
+                    exception_type=ExceptionType.CURRENCY_MISMATCH,
+                    legs=legs,
+                    net_amount=Decimal("0"),
+                    materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
+                    detected_reason=(
+                        f"{reference}: {leg_a.entity_code} booked {leg_a.currency} and "
+                        f"{leg_b.entity_code} booked {leg_b.currency}; the two legs cannot be "
+                        f"netted without an FX rate."
+                    ),
+                )
+            )
+            continue
+
         net = leg_a.amount + leg_b.amount
         if abs(net) > AMOUNT_TOLERANCE:
             exceptions.append(

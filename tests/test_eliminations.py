@@ -39,6 +39,26 @@ def test_build_elimination_balances():
     assert debits == credits == Decimal("1000.00")
 
 
+def test_elimination_clears_the_control_accounts_the_tieout_reads():
+    """The entry has to hit IC_PAYABLE / IC_RECEIVABLE, not a generic bucket --
+    otherwise the control accounts survive the elimination at group level."""
+    from intercompany_close_agent.reconciliation.tieout import (
+        IC_PAYABLE_ACCOUNT,
+        IC_RECEIVABLE_ACCOUNT,
+    )
+
+    pair = (
+        _leg("US01", "DE01", "REF-CTRL", "1000.00"),
+        _leg("DE01", "US01", "REF-CTRL", "-1000.00"),
+    )
+    elim = build_elimination(pair)
+
+    debit = next(line for line in elim.lines if line.line_type == JournalLineType.DEBIT)
+    credit = next(line for line in elim.lines if line.line_type == JournalLineType.CREDIT)
+    assert debit.account_code == IC_PAYABLE_ACCOUNT
+    assert credit.account_code == IC_RECEIVABLE_ACCOUNT
+
+
 def test_build_elimination_debits_the_payable_credits_the_receivable():
     pair = (
         _leg("US01", "DE01", "REF-1", "1000.00"),  # US01 is owed -> receivable

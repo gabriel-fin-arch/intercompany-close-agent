@@ -117,13 +117,17 @@ details.
 
 ## 4. Where I put the human in the loop -- and why
 
-Three exception types are **never** auto-resolved, regardless of dollar
+Four exception types are **never** auto-resolved, regardless of dollar
 amount: a missing counterparty booking, a balance booked against the wrong
-entity, and a reference shared by more than two legs. All three are control
-questions -- something is wrong with *who* booked *what*, not just *how
-much* -- and no rule engine or model should get to quietly decide that's
-fine because the number is small. Only genuine amount and timing residuals
-get auto-resolved, and only when they're below the materiality threshold.
+entity, a reference shared by more than two legs, and two legs denominated
+in different currencies. None of them is really a question about *how much*
+-- they're questions about *who* booked *what*, or in *what units* -- and no
+rule engine or model should get to quietly decide that's fine because the
+number looks small. A currency mismatch is the sharpest example: the amounts
+can net to exactly zero and still mean nothing, because netting them applies
+an implicit 1:1 rate between two different currencies. Only genuine amount
+and timing residuals get auto-resolved, and only when they're below the
+materiality threshold.
 
 That taxonomy is a judgment call, not a law of nature -- it's marked with
 `# REVIEW:` comments in `matching/engine.py` and `triage/rules.py` so it's
