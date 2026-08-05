@@ -55,18 +55,31 @@ def _build_chain():
     return prompt | structured_llm
 
 
+def _flatten(value: str) -> str:
+    """Collapse ledger free text onto one line before it goes into the prompt.
+
+    An intercompany reference is typed by whoever submitted the balance, so
+    it is not trusted input. Left alone, a reference containing newlines can
+    fake extra `key=value` lines in the block below and try to pass itself
+    off as instructions. Flattening doesn't make the text safe on its own --
+    the binding protection is the taxonomy check in triage/node.py, which no
+    prompt can talk its way past -- but it keeps the structure honest.
+    """
+    return " ".join(value.split())
+
+
 def _describe(exc: ICException, entities: dict[str, Entity] | None = None) -> str:
     legs_desc = "; ".join(
         f"{leg.entity_code} vs {leg.counterparty_code}: {leg.amount} {leg.currency} on {leg.transaction_date}"
         for leg in exc.legs
     )
     description = (
-        f"reference={exc.reference}\n"
+        f"reference={_flatten(exc.reference)}\n"
         f"exception_type={exc.exception_type.value}\n"
         f"materiality={exc.materiality.value}\n"
         f"net_amount={exc.net_amount}\n"
-        f"detected_reason={exc.detected_reason}\n"
-        f"legs: {legs_desc}"
+        f"detected_reason={_flatten(exc.detected_reason)}\n"
+        f"legs: {_flatten(legs_desc)}"
     )
 
     if entities:
