@@ -6,9 +6,9 @@ journal entries with a rationale, and routes anything that genuinely needs
 a person's judgment to a human reviewer instead of guessing.
 
 Built against a synthetic dataset (seven fictional entities, none real) so
-it's safe to run and inspect end to end. Runs fully offline by default; a
-Claude API key upgrades the triage narrative, it doesn't change what gets
-booked.
+it's safe to run and inspect end to end. Runs fully offline by default --
+a Claude API key upgrades the triage narrative, it doesn't change what
+gets booked.
 
 ```
 uv sync --extra dev
