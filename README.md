@@ -12,6 +12,8 @@ it's safe to run and inspect end to end. Runs fully offline by default --
 a Claude API key upgrades the triage narrative, it doesn't change what
 gets booked.
 
+![The reviewer dashboard: control account tie-out, audit trail, and the worklist of exceptions waiting on a human decision](docs/img/dashboard.png)
+
 ```
 uv sync --extra dev
 uv run python -m intercompany_close_agent.cli generate-data
