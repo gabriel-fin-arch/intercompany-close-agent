@@ -53,7 +53,10 @@ in ways that matter:
   loads automatically from the source ERP is a different risk profile than
   one that's keyed in by hand every month. This project's one
   non-interfaced entity (`ZA01`) carries a standing chance of manual
-  re-keying noise in the synthetic data for exactly this reason.
+  re-keying noise in the synthetic data for exactly this reason -- and
+  triage reads that flag, so an exception touching a manually loaded entity
+  loses confidence and gets escalated where an all-interfaced one of the
+  same size would have been auto-resolved.
 - **Some exception types are never "small enough to auto-resolve."** A
   missing counterparty booking, a balance booked against the wrong entity,
   or a reference shared by more than two legs are control questions, not
