@@ -24,6 +24,9 @@ _ALWAYS_NEEDS_JUDGMENT = {
     ExceptionType.MISSING_COUNTERPARTY,
     ExceptionType.DUPLICATE_REFERENCE,
     ExceptionType.COUNTERPARTY_MISMATCH,
+    # An entity booked as its own counterparty is a data error upstream, not
+    # a balance to eliminate -- someone has to go fix the mapping.
+    ExceptionType.SELF_DEALING,
     # Two legs in different currencies can't be netted without an FX rate,
     # and FX translation is out of scope here -- so there is nothing to
     # auto-resolve, only someone to tell.

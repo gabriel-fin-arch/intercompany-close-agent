@@ -20,6 +20,7 @@ from intercompany_close_agent.models.ledger import ICTransaction
 class ExceptionType(StrEnum):
     MISSING_COUNTERPARTY = "missing_counterparty"
     COUNTERPARTY_MISMATCH = "counterparty_mismatch"
+    SELF_DEALING = "self_dealing"
     CURRENCY_MISMATCH = "currency_mismatch"
     AMOUNT_MISMATCH = "amount_mismatch"
     TIMING_GAP = "timing_gap"
