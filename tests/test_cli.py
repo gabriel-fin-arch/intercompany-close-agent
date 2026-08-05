@@ -36,6 +36,14 @@ def test_run_against_generated_data_offline(tmp_path: Path, monkeypatch):
     assert "Audit trail" in run_result.output
 
 
+def test_run_with_missing_data_dir_fails_loudly(tmp_path: Path):
+    """A bad --data-dir should error out, not silently produce an empty run."""
+    missing_dir = tmp_path / "does-not-exist"
+    result = runner.invoke(app, ["run", "--data-dir", str(missing_dir)])
+
+    assert result.exit_code != 0
+
+
 def test_run_against_committed_sample_dataset():
     """Run against the real data/synthetic/*.csv shipped in the repo."""
     data_dir = Path(__file__).resolve().parent.parent / "data" / "synthetic"
