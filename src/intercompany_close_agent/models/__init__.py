@@ -4,6 +4,7 @@ from intercompany_close_agent.models.elimination import Elimination, JournalLine
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLine
+from intercompany_close_agent.models.review import ReviewAction, ReviewDecision
 
 __all__ = [
     "Elimination",
@@ -14,5 +15,7 @@ __all__ = [
     "JournalLine",
     "JournalLineType",
     "Materiality",
+    "ReviewAction",
+    "ReviewDecision",
     "TrialBalanceLine",
 ]
