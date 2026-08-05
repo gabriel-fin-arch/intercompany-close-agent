@@ -24,3 +24,5 @@ All notable changes to this project are logged here.
   worklist for anything pending human review.
 - Streamlit reviewer dashboard: run the pipeline, review the worklist, approve/reject/edit each
   pending item, and see the finalized eliminations and audit trail.
+- Full documentation: README (business problem, domain rationale, architecture, human-in-the-loop),
+  docs/architecture.md, docs/human-in-the-loop.md, docs/data-model.md, and a real captured example run.
