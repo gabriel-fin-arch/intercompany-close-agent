@@ -28,9 +28,8 @@ and not a control-flagged type.
 ## Who booked it counts, not just how much
 
 Materiality isn't the only input. If either side of the balance is an
-entity that loads manually rather than through a system interface, triage
-takes confidence off the result -- and an exception that would otherwise
-have been auto-resolved gets escalated instead. The reasoning is the same
+entity that loads manually rather than through a system interface, it is
+never auto-eliminated -- however small the residual. The reasoning is the
 one every group controller applies informally: a number that was keyed in
 by hand is a number that could have been keyed in wrong, and "small" is a
 weaker argument when the data path itself is the weak link.
@@ -38,6 +37,20 @@ weaker argument when the data path itself is the weak link.
 That's why `Entity.interfaced` isn't decoration. It's read at triage time
 (`triage/rules.py`, and passed to the model in `triage/llm.py`), and it can
 change the outcome on its own.
+
+Note this is written as a **policy**, not as a confidence penalty tuned
+until it happened to fall below a threshold. Both produce the same outcome;
+only one of them survives being asked "why 0.15?" in a controls review.
+
+## A word on the confidence numbers
+
+The rule-based path returns fixed confidence bands, not probabilities. A
+rule engine has no distribution to draw a probability from, and reporting
+`0.83` would be false precision dressed up as rigour. The bands exist so
+the deterministic path and the model path hand back the same shape, and so
+a reviewer sorting a worklist gets a sensible order either way. When the
+LLM path is running, its confidence *is* the model's own -- which is a
+different kind of number, and worth remembering when reading a worklist.
 
 That split is implemented identically in both triage paths --
 `triage/rules.py` (the offline fallback) and the system prompt in

@@ -48,6 +48,47 @@ per-balance judgment call, so routing it into the reviewer worklist would
 mix two different kinds of work. It's reported in the audit trail, carried
 in state as `tb_variances`, and surfaced by both the CLI and the dashboard.
 
+## The thresholds, and why they're set where they are
+
+Every number in `matching/engine.py` and `triage/rules.py` is a judgment
+call. None of them is a standard. What follows is the reasoning, so a
+reviewer can disagree with the values without having to reverse-engineer
+the intent.
+
+**Matching tolerance is two numbers, not one.** A flat absolute tolerance
+treats a USD 500 balance and a USD 250,000 one as if they carried the same
+risk. So the tolerance is the larger of a floor (USD 1.00 -- sub-unit
+differences are arithmetic noise at any size) and a rate (0.01% of the
+larger leg). The rate is deliberately an order of magnitude below real FX
+drift: converting the same balance at two different rates typically moves
+it by tenths of a percent, so a genuine FX difference still fails the check
+rather than being absorbed by it. `tests/test_matching.py` asserts exactly
+that.
+
+**Materiality is operational, not statutory.** For a group this size, audit
+materiality would run into the millions and a "clearly trivial" threshold
+into the tens of thousands. The threshold here (USD 5,000) is far tighter on
+purpose: an intercompany break is a signal that a process failed somewhere,
+and a controller wants to see that long before it becomes a misstatement
+risk. Using an audit-derived number here would be technically defensible and
+operationally useless.
+
+**Materiality means different things per exception type, deliberately.** For
+an amount mismatch it bands the *unexplained residual*; for a missing
+counterparty, a counterparty mismatch or a timing gap it bands the *balance
+at risk*, because in those cases the residual isn't the interesting number
+-- the whole balance is what's in question.
+
+**The tie-out tolerance is derived, not chosen.** It reuses the matching
+floor, because a group that calls a difference rounding noise when matching
+one balance can't coherently call the same difference a control failure when
+totalling them. It uses the floor rather than the rate: this compares totals,
+and a percentage of a total would scale the tolerance with the size of the
+entity's book instead of with the error.
+
+**Confidence values are bands, not probabilities.** See
+`docs/human-in-the-loop.md`.
+
 ## Why matching and exception detection are one node, not two
 
 `matching/engine.py`'s `match_transactions()` is a single pure function: it

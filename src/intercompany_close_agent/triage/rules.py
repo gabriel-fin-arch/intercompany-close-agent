@@ -33,15 +33,14 @@ _ALWAYS_NEEDS_JUDGMENT = {
     ExceptionType.CURRENCY_MISMATCH,
 }
 
-# Confidence penalty applied when a non-interfaced (manually loaded) entity
-# is on either side of the balance. Their data has been keyed in by hand, so
-# an otherwise-immaterial residual is less likely to mean what it looks like.
-# REVIEW: the size of this penalty is a judgment call, not a standard.
-MANUAL_ENTITY_CONFIDENCE_PENALTY = 0.15
-
-# Below this confidence, an otherwise auto-resolvable exception gets escalated
-# instead. Keeps the "how sure are we" and "who decides" questions connected.
-AUTO_RESOLVE_MIN_CONFIDENCE = 0.6
+# Confidence bands for the deterministic path. These are fixed labels, not
+# probabilities -- a rule engine has no distribution to draw one from, and
+# dressing a policy decision up as 0.83 would be false precision. They exist
+# so the rule path and the model path hand back the same shape, and so a
+# reviewer sorting a worklist gets a sensible order either way.
+CONFIDENCE_POLICY = 0.95  # a stated rule fired; nothing was weighed
+CONFIDENCE_MATERIAL = 0.80  # judgment call, but the amount makes it clear-cut
+CONFIDENCE_IMMATERIAL = 0.70  # judgment call on a small residual
 
 
 def _manual_entities(exc: ICException, entities: dict[str, Entity] | None) -> list[str]:
@@ -71,51 +70,48 @@ def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None
         return TriageResult(
             reference=exc.reference,
             classification=TriageClassification.NEEDS_HUMAN_JUDGMENT,
-            confidence=0.95,
+            confidence=CONFIDENCE_POLICY,
             rationale=rationale,
         )
 
-    # AMOUNT_MISMATCH / TIMING_GAP -- these are genuine intercompany balances
-    # on both sides that just didn't line up cleanly. Materiality decides
-    # whether that's worth a human's time.
-    if exc.materiality == Materiality.LOW:
-        confidence = 0.7
-        rationale = (
-            f"{exc.detected_reason} Residual is below the group materiality threshold, "
-            f"proposed for auto-elimination rather than escalation."
+    # AMOUNT_MISMATCH / TIMING_GAP -- genuine intercompany balances on both
+    # sides that just didn't line up cleanly. Two things decide whether a
+    # human needs to see it: how big the residual is, and how much the data
+    # underneath it can be trusted.
+    if manual:
+        # A manually keyed balance doesn't get auto-eliminated on the strength
+        # of being small. This is a policy, stated once, rather than a
+        # confidence penalty tuned until it happened to cross a threshold --
+        # the outcome is the same and the reasoning survives being asked about.
+        return TriageResult(
+            reference=exc.reference,
+            classification=TriageClassification.NEEDS_HUMAN_JUDGMENT,
+            confidence=CONFIDENCE_POLICY,
+            rationale=(
+                f"{exc.detected_reason} Not auto-eliminated regardless of size: "
+                f"{', '.join(manual)} "
+                f"{'keys' if len(manual) == 1 else 'key'} data in by hand rather than "
+                f"loading through a system interface."
+            ),
         )
 
-        if manual:
-            confidence -= MANUAL_ENTITY_CONFIDENCE_PENALTY
-            rationale = (
-                f"{rationale} Confidence reduced because {', '.join(manual)} "
-                f"{'loads' if len(manual) == 1 else 'load'} manually rather than through a "
-                f"system interface."
-            )
-
-        if confidence < AUTO_RESOLVE_MIN_CONFIDENCE:
-            return TriageResult(
-                reference=exc.reference,
-                classification=TriageClassification.NEEDS_HUMAN_JUDGMENT,
-                confidence=confidence,
-                rationale=f"{rationale} Escalating rather than auto-eliminating at this confidence.",
-            )
-
+    if exc.materiality == Materiality.LOW:
         return TriageResult(
             reference=exc.reference,
             classification=TriageClassification.AUTO_RESOLVABLE,
-            confidence=confidence,
-            rationale=rationale,
+            confidence=CONFIDENCE_IMMATERIAL,
+            rationale=(
+                f"{exc.detected_reason} Residual is below the group materiality threshold and "
+                f"both sides load through a system interface, so it's proposed for "
+                f"auto-elimination rather than escalation."
+            ),
         )
-
-    confidence = 0.8 - (MANUAL_ENTITY_CONFIDENCE_PENALTY if manual else 0.0)
-    rationale = f"{exc.detected_reason} Residual is material, so this needs sign-off before eliminating."
-    if manual:
-        rationale = f"{rationale} Note that {', '.join(manual)} is a manually loaded entity."
 
     return TriageResult(
         reference=exc.reference,
         classification=TriageClassification.NEEDS_HUMAN_JUDGMENT,
-        confidence=confidence,
-        rationale=rationale,
+        confidence=CONFIDENCE_MATERIAL,
+        rationale=(
+            f"{exc.detected_reason} Residual is material, so this needs sign-off before eliminating."
+        ),
     )
