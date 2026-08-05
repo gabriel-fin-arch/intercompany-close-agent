@@ -1,0 +1,8 @@
+code,name,region,local_currency,reporting_currency,interfaced
+US01,Vireon Biosciences US Inc,US,USD,USD,True
+DE01,Vireon Pharma GmbH,EMEA,EUR,USD,True
+GB01,Vireon Life Sciences UK Ltd,EMEA,GBP,USD,True
+IE01,Vireon Ireland Manufacturing Ltd,EMEA,EUR,USD,True
+BR01,Vireon Farmaceutica do Brasil Ltda,LATAM,BRL,USD,True
+MX01,Vireon Mexico SA de CV,LATAM,MXN,USD,True
+ZA01,Vireon South Africa Pty Ltd,AFRICA,ZAR,USD,False
