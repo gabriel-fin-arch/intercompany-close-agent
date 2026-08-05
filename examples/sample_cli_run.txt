@@ -1,0 +1,69 @@
+Triage mode: offline rule-based fallback
+Loaded 7 entities, 51 IC transaction legs
+
+=== Audit trail ===
+  - ingested 51 IC transaction legs
+  - normalized ledger data
+  - matched 17 clean pairs, 14 exceptions
+  - triaged 14 exceptions
+
+=== Reviewer worklist (14 item(s) need a human decision) ===
+  [HIGH] PRODUCT-2025-1001 -- counterparty_mismatch
+      net amount: 0.00
+      why: DE01 booked PRODUCT-2025-1001 against ZA01, but ZA01 booked it against US01 instead of DE01.
+      triage (confidence 0.95): counterparty mismatch exceptions are never auto-resolved by the rule fallback: DE01 booked PRODUCT-2025-1001 against ZA01, but ZA01 booked it against US01 instead of DE01.
+  [HIGH] MGMT-FEE-2025-1003 -- timing_gap
+      net amount: 0.00
+      why: MGMT-FEE-2025-1003: legs are 9 days apart (2025-09-24 vs 2025-10-03), beyond the 2-day cutoff tolerance.
+      triage (confidence 0.80): MGMT-FEE-2025-1003: legs are 9 days apart (2025-09-24 vs 2025-10-03), beyond the 2-day cutoff tolerance. Residual is material, so this needs sign-off before eliminating.
+  [HIGH] LOAN-INT-2025-1010 -- missing_counterparty
+      net amount: 180428.29
+      why: ZA01 booked LOAN-INT-2025-1010 against US01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: ZA01 booked LOAN-INT-2025-1010 against US01, but no mirror leg was found under this reference.
+  [HIGH] LOAN_INT-2025-1010 -- missing_counterparty
+      net amount: -180428.29
+      why: US01 booked LOAN_INT-2025-1010 against ZA01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: US01 booked LOAN_INT-2025-1010 against ZA01, but no mirror leg was found under this reference.
+  [HIGH] PRODUCT-2025-1013 -- missing_counterparty
+      net amount: 97602.48
+      why: US01 booked PRODUCT-2025-1013 against MX01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: US01 booked PRODUCT-2025-1013 against MX01, but no mirror leg was found under this reference.
+  [HIGH] MGMT-FEE-2025-1014 -- missing_counterparty
+      net amount: 128049.19
+      why: ZA01 booked MGMT-FEE-2025-1014 against DE01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: ZA01 booked MGMT-FEE-2025-1014 against DE01, but no mirror leg was found under this reference.
+  [HIGH] MGMT_FEE-2025-1014 -- missing_counterparty
+      net amount: -128049.19
+      why: DE01 booked MGMT_FEE-2025-1014 against ZA01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: DE01 booked MGMT_FEE-2025-1014 against ZA01, but no mirror leg was found under this reference.
+  [HIGH] PRODUCT-2025-1019 -- amount_mismatch
+      net amount: 460436.84
+      why: PRODUCT-2025-1019: legs net to 460436.84 instead of zero (tolerance is 0.05).
+      triage (confidence 0.80): PRODUCT-2025-1019: legs net to 460436.84 instead of zero (tolerance is 0.05). Residual is material, so this needs sign-off before eliminating.
+  [HIGH] PRODUCT-2025-1020 -- missing_counterparty
+      net amount: 11271.05
+      why: ZA01 booked PRODUCT-2025-1020 against US01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: ZA01 booked PRODUCT-2025-1020 against US01, but no mirror leg was found under this reference.
+  [HIGH] PRODUCT_2025-1020 -- missing_counterparty
+      net amount: -11271.05
+      why: US01 booked PRODUCT_2025-1020 against ZA01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: US01 booked PRODUCT_2025-1020 against ZA01, but no mirror leg was found under this reference.
+  [HIGH] PRODUCT-2025-1022 -- missing_counterparty
+      net amount: 220428.72
+      why: MX01 booked PRODUCT-2025-1022 against GB01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: MX01 booked PRODUCT-2025-1022 against GB01, but no mirror leg was found under this reference.
+  [HIGH] PRODUCT_2025-1022 -- missing_counterparty
+      net amount: -220428.72
+      why: GB01 booked PRODUCT_2025-1022 against MX01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: GB01 booked PRODUCT_2025-1022 against MX01, but no mirror leg was found under this reference.
+  [HIGH] LOAN-INT-2025-1023 -- missing_counterparty
+      net amount: 48439.75
+      why: IE01 booked LOAN-INT-2025-1023 against MX01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: IE01 booked LOAN-INT-2025-1023 against MX01, but no mirror leg was found under this reference.
+  [HIGH] LOAN_INT-2025-1023 -- missing_counterparty
+      net amount: -48439.75
+      why: MX01 booked LOAN_INT-2025-1023 against IE01, but no mirror leg was found under this reference.
+      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: MX01 booked LOAN_INT-2025-1023 against IE01, but no mirror leg was found under this reference.
+
+Run the reviewer dashboard to approve, reject or edit these:
+  uv run streamlit run app/streamlit_app.py
