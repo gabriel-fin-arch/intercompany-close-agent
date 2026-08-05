@@ -12,3 +12,5 @@ All notable changes to this project are logged here.
 - Deterministic IC matching engine: reference pairing, counterparty consistency,
   amount tolerance, timing-gap and duplicate-reference detection, with full test
   coverage including an integration test against the real synthetic dataset.
+- Elimination JE generation from matched pairs, with a balance invariant enforced
+  at the model level.
