@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class ReviewAction(str, Enum):
+class ReviewAction(StrEnum):
     APPROVE = "approve"
     REJECT = "reject"
     EDIT = "edit"

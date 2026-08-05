@@ -34,7 +34,13 @@ ENTITIES: list[Entity] = [
     Entity(code="DE01", name="Vireon Pharma GmbH", region="EMEA", local_currency="EUR", interfaced=True),
     Entity(code="GB01", name="Vireon Life Sciences UK Ltd", region="EMEA", local_currency="GBP", interfaced=True),
     Entity(code="IE01", name="Vireon Ireland Manufacturing Ltd", region="EMEA", local_currency="EUR", interfaced=True),
-    Entity(code="BR01", name="Vireon Farmaceutica do Brasil Ltda", region="LATAM", local_currency="BRL", interfaced=True),
+    Entity(
+        code="BR01",
+        name="Vireon Farmaceutica do Brasil Ltda",
+        region="LATAM",
+        local_currency="BRL",
+        interfaced=True,
+    ),
     Entity(code="MX01", name="Vireon Mexico SA de CV", region="LATAM", local_currency="MXN", interfaced=True),
     Entity(code="ZA01", name="Vireon South Africa Pty Ltd", region="AFRICA", local_currency="ZAR", interfaced=False),
 ]
@@ -225,7 +231,15 @@ def generate(seed: int = 42, pair_count: int = 26, out_dir: Path = OUTPUT_DIR) -
     _write_csv(
         out_dir / "ic_ledger.csv",
         ic_rows,
-        fieldnames=["entity_code", "counterparty_code", "reference", "amount", "currency", "transaction_date", "description"],
+        fieldnames=[
+            "entity_code",
+            "counterparty_code",
+            "reference",
+            "amount",
+            "currency",
+            "transaction_date",
+            "description",
+        ],
     )
     _write_csv(
         out_dir / "trial_balance.csv",
