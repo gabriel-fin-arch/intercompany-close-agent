@@ -65,6 +65,17 @@ if result is None:
 final = st.session_state.get("final")
 display_state = final if final is not None else result
 
+n_clean = len(result.get("clean_pairs", []))
+n_exceptions = len(result.get("exceptions", []))
+n_pending = len(result["__interrupt__"][0].value["pending_review"]) if "__interrupt__" in result else 0
+n_eliminations = len(display_state.get("eliminations", []))
+
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Clean pairs", n_clean)
+col2.metric("Exceptions", n_exceptions)
+col3.metric("Pending review", n_pending if final is None else 0)
+col4.metric("Eliminations finalized", n_eliminations)
+
 st.subheader("Audit trail")
 for line in display_state["audit_trail"]:
     st.text(f"- {line}")
