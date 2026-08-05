@@ -8,9 +8,9 @@ journal entries with a rationale, and routes anything that genuinely needs
 a person's judgment to a human reviewer instead of guessing.
 
 Built against a synthetic dataset (seven fictional entities, none real) so
-it's safe to run and inspect end to end. Runs fully offline by default --
-a Claude API key upgrades the triage narrative, it doesn't change what
-gets booked.
+it's safe to run and inspect end to end. Runs fully offline by default. A
+Claude API key upgrades the triage narrative; it doesn't change what gets
+booked.
 
 ![The reviewer dashboard: control account tie-out, audit trail, and the worklist of exceptions waiting on a human decision](docs/img/dashboard.png)
 
@@ -33,12 +33,12 @@ the group's books need to net that back out to zero before it hits the
 consolidated P&L and balance sheet. Multiply that across dozens of entities
 and hundreds of intercompany transactions a month, and the actual work
 becomes: pull both sides of every balance, match them up, and figure out
-what to do with the ones that don't match cleanly -- a counterparty that
-never booked its side, an amount that's off by more than rounding, a
-balance booked against the wrong entity, a booking that landed after the
-other side's cutoff.
+what to do with the ones that don't match cleanly. A counterparty that
+never booked its side. An amount off by more than rounding. A balance
+booked against the wrong entity. A booking that landed after the other
+side's cutoff.
 
-Most of that matching is mechanical. Some of it genuinely isn't -- and
+Most of that matching is mechanical. Some of it genuinely isn't, and
 knowing which is which, without either burying a reviewer in noise or
 quietly auto-resolving something that needed a second pair of eyes, is the
 actual problem this project is about.
@@ -52,25 +52,27 @@ in ways that matter:
   $50,000 sign error are not the same kind of problem, even though both are
   "the amounts don't match." Getting the tolerance band and the materiality
   threshold right is a judgment call that reflects how the group actually
-  runs its close -- not a constant you can hardcode once and forget.
+  runs its close, not a constant you hardcode once and forget.
 - **Not every entity is equally trustworthy.** An entity whose trial balance
   loads automatically from the source ERP is a different risk profile than
   one that's keyed in by hand every month. This project's one
   non-interfaced entity (`ZA01`) carries a standing chance of manual
-  re-keying noise in the synthetic data for exactly this reason -- and
-  triage reads that flag: a balance touching a manually loaded entity is
-  never auto-eliminated on the strength of being small, where an
-  all-interfaced one of the same size would be.
+  re-keying noise in the synthetic data for exactly this reason. Triage
+  reads that flag: a balance touching a manually loaded entity is never
+  auto-eliminated on the strength of being small, where an all-interfaced
+  one of the same size would be.
 - **"Same period" beats "a few days apart."** Two legs booked eight days
   apart inside one month both make it into the same close and consolidate
   fine. Two legs booked one day apart across a month end do not. The
   timing check compares accounting periods, not elapsed days, because
   elapsed days is the wrong question.
 - **Some exception types are never "small enough to auto-resolve."** A
-  missing counterparty booking, a balance booked against the wrong entity,
-  or a reference shared by more than two legs are control questions, not
-  amount questions -- the dollar value doesn't make them safe to wave
-  through. See `docs/human-in-the-loop.md` for the full reasoning.
+  missing counterparty booking, a balance against the wrong entity, an
+  entity booked as its own counterparty, two legs in different currencies,
+  a reference shared by more than two legs: all five are control questions
+  rather than amount questions, and the dollar value doesn't make any of
+  them safe to wave through. See `docs/human-in-the-loop.md` for the
+  reasoning on each.
 - **You tie out before you eliminate.** Before matching anything, the
   pipeline checks each entity's IC subledger against its intercompany
   control accounts on the trial balance. A balance that won't match its
@@ -98,49 +100,49 @@ balance, matching two IC legs, checking a tolerance, and building a
 balanced elimination entry are all deterministic Python
 (`reconciliation/`, `matching/`, `eliminations/`) with full unit coverage,
 including a net-zero invariant enforced at the model level. The model never
-sees a number it's asked to add up -- it only ever classifies an exception
+sees a number it's asked to add up. It only classifies an exception
 (`auto_resolvable` vs. `needs_human_judgment`) and writes the rationale a
-reviewer reads. If the arithmetic and the judgment call ever lived in the
-same function, you'd have no way to unit test the numbers without also
-depending on a live model call.
+reviewer reads. If the arithmetic and the judgment call lived in the same
+function, there'd be no way to unit test the numbers without also depending
+on a live model call.
 
-**Triage runs against Claude, or a deterministic rule-based fallback --
-same output shape either way.** With `ANTHROPIC_API_KEY` and
+**Triage runs against Claude, or a deterministic rule-based fallback, with
+the same output shape either way.** With `ANTHROPIC_API_KEY` and
 `ANTHROPIC_MODEL` set, `triage/llm.py` calls Claude via `langchain-anthropic`
-with structured output. Without them (or if the live call fails for any
-reason -- rate limit, network blip), `triage/rules.py` takes over: a small,
-legible set of rules keyed on exception type and materiality. Nothing about
+with structured output. Without them, or if the live call fails for any
+reason (rate limit, network blip), `triage/rules.py` takes over: a small,
+legible set of rules keyed on exception type and materiality. Nothing in
 `graph/nodes.py` or the CLI/dashboard changes based on which path ran; they
-only ever see a `TriageResult`. This is also what makes the whole project
+only ever see a `TriageResult`. That's also what makes the whole project
 runnable and testable without an API key.
 
 **Where the graph can stop.** `human_review` is the only node that talks to
 a person. If triage found anything that needs judgment, it calls
-LangGraph's native `interrupt()` and the run pauses there -- the CLI prints
-the worklist and exits; the dashboard renders it and waits for decisions.
-Resuming (`Command(resume=decisions)`) picks the graph back up exactly
+LangGraph's native `interrupt()` and the run pauses there: the CLI prints
+the worklist and exits, the dashboard renders it and waits for decisions.
+Resuming with `Command(resume=decisions)` picks the graph back up exactly
 where it stopped. See `docs/architecture.md` for the state shape and node
 details.
 
-## 4. Where I put the human in the loop -- and why
+## 4. Where I put the human in the loop, and why
 
 Five exception types are **never** auto-resolved, regardless of dollar
 amount: a missing counterparty booking, a balance booked against the wrong
 entity, an entity booked as its own counterparty, a reference shared by more
 than two legs, and two legs denominated in different currencies. None of
-them is really a question about *how much* -- they're questions about *who*
-booked *what*, or in *what units* -- and no
-rule engine or model should get to quietly decide that's fine because the
-number looks small. A currency mismatch is the sharpest example: the amounts
-can net to exactly zero and still mean nothing, because netting them applies
-an implicit 1:1 rate between two different currencies. Only genuine amount
-and timing residuals get auto-resolved, and only when they're below the
-materiality threshold.
+them is really a question about *how much*. They're questions about *who*
+booked *what*, or in *what units*, and no rule engine or model should get to
+quietly decide that's fine because the number looks small. A currency
+mismatch is the sharpest example: the amounts can net to exactly zero and
+still mean nothing, because netting them applies an implicit 1:1 rate
+between two different currencies. Only genuine amount and period residuals
+get auto-resolved, and only when they're below the materiality threshold.
 
-That taxonomy is a judgment call, not a law of nature -- it's marked with
-`# REVIEW:` comments in `matching/engine.py` and `triage/rules.py` so it's
-easy to find and easy to disagree with. The full reasoning, including what
-"approve reject edit" actually books, lives in `docs/human-in-the-loop.md`.
+That taxonomy is a judgment call, not a law of nature. It's flagged with a
+`# REVIEW:` comment in `triage/rules.py` so it's easy to find and easy to
+disagree with. The full reasoning, including what approve, reject and edit
+each actually book, lives in `docs/human-in-the-loop.md`; the thresholds and
+why they sit where they do are in `docs/architecture.md`.
 
 ## Project layout
 
@@ -151,14 +153,14 @@ src/intercompany_close_agent/
   reconciliation/  trial balance control-account tie-out     <- unit tested
   matching/        deterministic IC matching engine          <- unit tested
   eliminations/    elimination JE generation                 <- unit tested
-  triage/        LLM triage (Claude) + offline rule fallback
-  graph/         LangGraph state, nodes, and the compiled graph
-  synthetic/     synthetic dataset generator
-  cli.py         typer CLI
+  triage/          LLM triage (Claude) + offline rule fallback
+  graph/           LangGraph state, nodes, and the compiled graph
+  synthetic/       synthetic dataset generator
+  cli.py           typer CLI
 app/
   streamlit_app.py   reviewer dashboard
 data/synthetic/      committed sample dataset (regeneratable)
-docs/                 architecture.md, human-in-the-loop.md, data-model.md
+docs/                architecture.md, human-in-the-loop.md, data-model.md
 tests/
 ```
 
@@ -187,8 +189,8 @@ uv run pytest
 ## What's out of scope (for now)
 
 FX/CTA translation, AR aging reconciliation, and Special Charges are all
-real parts of a consolidation close and all deliberately out of scope here
--- this project stays narrow on purpose. They're natural extensions if this
+real parts of a consolidation close, and all out of scope here: this
+project stays narrow on purpose. They're natural extensions if this
 ever grows past a portfolio piece.
 
 ## License

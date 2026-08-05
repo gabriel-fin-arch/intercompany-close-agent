@@ -53,8 +53,8 @@ EPM, or similar) fed by a source ERP:
   | `local_currency` | An affiliate reported in its own local currency instead of the group's USD |
 
   Everything that *isn't* broken should match cleanly by
-  `counterparty_code` + `reference` + `amount` within a small tolerance --
-  that clean majority is what lets the matching engine focus its output on
+  `counterparty_code` + `reference` + `amount` within a small tolerance.
+  That clean majority is what lets the matching engine focus its output on
   the balances that actually need attention.
 
 ## Regenerating

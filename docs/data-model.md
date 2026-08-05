@@ -2,7 +2,7 @@
 
 All models are pydantic v2 (`src/intercompany_close_agent/models/`, plus
 `triage/models.py` for the triage-specific ones). Money is `Decimal`
-throughout -- `float` doesn't belong anywhere near a balance that has to
+throughout -- `float` has no business anywhere near a balance that has to
 net to exactly zero.
 
 ## Master data
@@ -33,7 +33,7 @@ what counts as a break.
 **`ICException`** (`models/exception.py`) -- what's left over once clean
 pairs are pulled out. Deliberately free of anything an LLM produces: no
 confidence score, no narrative. Whether triage runs against Claude or the
-offline rule fallback, an `ICException` means the same thing either way --
+offline rule fallback, an `ICException` means the same thing either way:
 the matching engine that builds it never knows or cares which one is
 coming next.
 
@@ -41,10 +41,11 @@ coming next.
 class ICException(BaseModel):
     reference: str
     exception_type: ExceptionType   # missing_counterparty | counterparty_mismatch
-                                     # | amount_mismatch | timing_gap | duplicate_reference
+                                    # | self_dealing | currency_mismatch
+                                    # | amount_mismatch | timing_gap | duplicate_reference
     legs: list[ICTransaction]
     net_amount: Decimal
-    materiality: Materiality        # low | high -- pure magnitude, not a judgment call
+    materiality: Materiality        # low | high: pure magnitude, not a judgment call
     detected_reason: str            # plain-language, code-generated
 ```
 
@@ -54,8 +55,8 @@ class ICException(BaseModel):
 triage decides about one exception. `TriageJudgment` is the bare judgment
 (classification, confidence, rationale); `TriageResult` adds the
 `reference` back on. Split this way so the LLM's structured-output schema
-(`TriageJudgment`) never has to correctly echo back a reference string --
-the code sets that itself from the exception being triaged.
+(`TriageJudgment`) never has to correctly echo back a reference string.
+The code sets that itself from the exception being triaged.
 
 ```python
 class TriageJudgment(BaseModel):
