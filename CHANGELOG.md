@@ -20,3 +20,5 @@ All notable changes to this project are logged here.
   fallback also catches any live-call failure so one bad LLM response can't take the close down.
   human_review uses LangGraph's native interrupt() to pause the run for anything that needs a
   person's judgment; nothing is auto-eliminated past that point without an explicit decision.
+- CLI (typer): `generate-data` and `run`. `run` works fully offline and prints the reviewer
+  worklist for anything pending human review.
