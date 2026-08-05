@@ -6,9 +6,10 @@ from datetime import date
 from decimal import Decimal
 
 from intercompany_close_agent.matching.engine import (
-    AMOUNT_TOLERANCE,
+    AMOUNT_TOLERANCE_FLOOR,
+    AMOUNT_TOLERANCE_RATE,
     MATERIALITY_THRESHOLD,
-    TIMING_TOLERANCE_DAYS,
+    amount_tolerance_for,
     match_transactions,
 )
 from intercompany_close_agent.models.exception import ExceptionType, Materiality
@@ -53,11 +54,42 @@ def test_missing_counterparty():
 def test_rounding_within_tolerance_is_a_clean_match():
     legs = [
         _leg("US01", "DE01", "REF-3", "1000.00"),
-        _leg("DE01", "US01", "REF-3", str(-Decimal("1000.00") + AMOUNT_TOLERANCE)),  # right at the edge
+        _leg("DE01", "US01", "REF-3", str(-Decimal("1000.00") + AMOUNT_TOLERANCE_FLOOR)),  # at the edge
     ]
     result = match_transactions(legs)
     assert len(result.clean_pairs) == 1
     assert result.exceptions == []
+
+
+def test_tolerance_scales_with_the_size_of_the_balance():
+    """A flat tolerance would treat a small balance and a large one alike."""
+    assert amount_tolerance_for(Decimal("500.00")) == AMOUNT_TOLERANCE_FLOOR  # floor applies
+    assert amount_tolerance_for(Decimal("1000000.00")) == Decimal("1000000.00") * AMOUNT_TOLERANCE_RATE
+
+    # a 50-dollar break on a 500-dollar balance is a real difference
+    small = [
+        _leg("US01", "DE01", "REF-S", "500.00"),
+        _leg("DE01", "US01", "REF-S", "-450.00"),
+    ]
+    assert len(match_transactions(small).exceptions) == 1
+
+    # the same 50 dollars on a 5,000,000 balance is noise
+    large = [
+        _leg("US01", "DE01", "REF-L", "5000000.00"),
+        _leg("DE01", "US01", "REF-L", "-4999950.00"),
+    ]
+    assert len(match_transactions(large).clean_pairs) == 1
+
+
+def test_fx_drift_still_fails_despite_the_relative_tolerance():
+    """The relative rate is sized well below real FX drift, so it can't hide it."""
+    legs = [
+        _leg("US01", "DE01", "REF-FXD", "100000.00"),
+        _leg("DE01", "US01", "REF-FXD", "-100200.00"),  # 0.2% apart, typical rate drift
+    ]
+    result = match_transactions(legs)
+    assert len(result.exceptions) == 1
+    assert result.exceptions[0].exception_type == ExceptionType.AMOUNT_MISMATCH
 
 
 def test_counterparty_mismatch():
@@ -98,22 +130,22 @@ def test_amount_mismatch_materiality_bands():
     assert result_large.exceptions[0].materiality == Materiality.HIGH
 
 
-def test_timing_gap_flagged_even_when_amounts_match():
+def test_legs_straddling_a_period_end_are_a_timing_gap():
+    """One day apart, but on opposite sides of the close -- a real cutoff break."""
     legs = [
-        _leg("US01", "DE01", "REF-8", "1000.00", txn_date=date(2025, 9, 20)),
-        _leg("DE01", "US01", "REF-8", "-1000.00", txn_date=date(2025, 9, 29)),  # 9 days later
+        _leg("US01", "DE01", "REF-8", "1000.00", txn_date=date(2025, 9, 30)),
+        _leg("DE01", "US01", "REF-8", "-1000.00", txn_date=date(2025, 10, 1)),
     ]
     result = match_transactions(legs)
     assert len(result.exceptions) == 1
     assert result.exceptions[0].exception_type == ExceptionType.TIMING_GAP
 
 
-def test_timing_within_tolerance_is_clean():
-    # exactly TIMING_TOLERANCE_DAYS apart -- right at the boundary, still clean
-    assert TIMING_TOLERANCE_DAYS == 2
+def test_a_wide_gap_inside_one_period_is_clean():
+    """Twenty days apart, but both land in the same close -- nothing to chase."""
     legs = [
-        _leg("US01", "DE01", "REF-9", "1000.00", txn_date=date(2025, 9, 28)),
-        _leg("DE01", "US01", "REF-9", "-1000.00", txn_date=date(2025, 9, 30)),
+        _leg("US01", "DE01", "REF-9", "1000.00", txn_date=date(2025, 9, 8)),
+        _leg("DE01", "US01", "REF-9", "-1000.00", txn_date=date(2025, 9, 28)),
     ]
     result = match_transactions(legs)
     assert result.exceptions == []
