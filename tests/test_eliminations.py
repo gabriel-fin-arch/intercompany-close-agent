@@ -7,8 +7,13 @@ from decimal import Decimal
 
 import pytest
 
-from intercompany_close_agent.eliminations.engine import build_elimination, build_eliminations
+from intercompany_close_agent.eliminations.engine import (
+    build_elimination,
+    build_elimination_from_exception,
+    build_eliminations,
+)
 from intercompany_close_agent.models.elimination import Elimination, JournalLine, JournalLineType
+from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
 
 
@@ -90,6 +95,48 @@ def test_elimination_model_rejects_unbalanced_lines():
                 ),
             ],
         )
+
+
+def test_build_elimination_from_exception_uses_the_raw_amount_by_default():
+    exc = ICException(
+        reference="REF-5",
+        exception_type=ExceptionType.AMOUNT_MISMATCH,
+        legs=[_leg("US01", "DE01", "REF-5", "1000.00"), _leg("DE01", "US01", "REF-5", "-950.00")],
+        net_amount=Decimal("50.00"),
+        materiality=Materiality.LOW,
+        detected_reason="test fixture",
+    )
+    elim = build_elimination_from_exception(exc)
+    debits = sum(line.amount for line in elim.lines if line.line_type == JournalLineType.DEBIT)
+    credits = sum(line.amount for line in elim.lines if line.line_type == JournalLineType.CREDIT)
+    assert debits == credits == Decimal("1000.00")  # the receivable leg's amount, not the residual
+
+
+def test_build_elimination_from_exception_honors_override_amount():
+    exc = ICException(
+        reference="REF-6",
+        exception_type=ExceptionType.TIMING_GAP,
+        legs=[_leg("US01", "DE01", "REF-6", "1000.00"), _leg("DE01", "US01", "REF-6", "-1000.00")],
+        net_amount=Decimal("0.00"),
+        materiality=Materiality.LOW,
+        detected_reason="test fixture",
+    )
+    elim = build_elimination_from_exception(exc, override_amount=Decimal("800.00"))
+    debits = sum(line.amount for line in elim.lines if line.line_type == JournalLineType.DEBIT)
+    assert debits == Decimal("800.00")
+
+
+def test_build_elimination_from_exception_rejects_wrong_leg_count():
+    exc = ICException(
+        reference="REF-7",
+        exception_type=ExceptionType.MISSING_COUNTERPARTY,
+        legs=[_leg("US01", "DE01", "REF-7", "1000.00")],
+        net_amount=Decimal("1000.00"),
+        materiality=Materiality.HIGH,
+        detected_reason="test fixture",
+    )
+    with pytest.raises(ValueError, match="cannot build an elimination"):
+        build_elimination_from_exception(exc)
 
 
 def test_against_the_real_synthetic_dataset():
