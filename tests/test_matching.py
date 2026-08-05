@@ -125,6 +125,18 @@ def test_duplicate_reference_flagged():
     assert result.exceptions[0].exception_type == ExceptionType.DUPLICATE_REFERENCE
 
 
+def test_summary_counts_by_type():
+    legs = [
+        _leg("US01", "DE01", "REF-11", "1000.00"),
+        _leg("DE01", "US01", "REF-11", "-1000.00"),
+        _leg("US01", "GB01", "REF-12", "500.00"),  # missing counterparty
+    ]
+    result = match_transactions(legs)
+    summary = result.summary()
+    assert summary["clean_pairs"] == 1
+    assert summary["missing_counterparty"] == 1
+
+
 def test_against_the_real_synthetic_dataset():
     """Sanity check against the generator's actual output, not just hand-built fixtures."""
     from pathlib import Path

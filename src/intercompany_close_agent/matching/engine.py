@@ -40,6 +40,14 @@ class MatchResult:
         self.clean_pairs = clean_pairs
         self.exceptions = exceptions
 
+    def summary(self) -> dict[str, int]:
+        """Counts by exception type, plus the clean-pair count, for reporting."""
+        counts: dict[str, int] = {"clean_pairs": len(self.clean_pairs)}
+        for exc in self.exceptions:
+            key = exc.exception_type.value
+            counts[key] = counts.get(key, 0) + 1
+        return counts
+
 
 def _materiality_for(amount: Decimal) -> Materiality:
     return Materiality.HIGH if abs(amount) >= MATERIALITY_THRESHOLD else Materiality.LOW
