@@ -14,3 +14,9 @@ All notable changes to this project are logged here.
   coverage including an integration test against the real synthetic dataset.
 - Elimination JE generation from matched pairs, with a balance invariant enforced
   at the model level.
+- LangGraph close pipeline: ingest -> normalize -> match -> triage -> human_review -> finalize.
+  Triage runs against Claude (langchain-anthropic, model from ANTHROPIC_MODEL) or a deterministic
+  rule-based fallback when no API key/model is configured -- same result shape either way, and the
+  fallback also catches any live-call failure so one bad LLM response can't take the close down.
+  human_review uses LangGraph's native interrupt() to pause the run for anything that needs a
+  person's judgment; nothing is auto-eliminated past that point without an explicit decision.
