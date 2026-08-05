@@ -17,13 +17,41 @@ ships a SQLite one); nothing else about the graph would need to change.
 from __future__ import annotations
 
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command
 
 from intercompany_close_agent.graph.nodes import finalize, human_review, ingest, match, reconcile, triage
 from intercompany_close_agent.graph.state import CloseState
+from intercompany_close_agent.models.control import TrialBalanceVariance
+from intercompany_close_agent.models.elimination import Elimination, JournalLine, JournalLineType
 from intercompany_close_agent.models.entity import Entity
+from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLine
+from intercompany_close_agent.models.review import ReviewAction, ReviewDecision
+from intercompany_close_agent.triage.models import TriageClassification, TriageResult
+
+# Every type that can end up inside a checkpoint. Pausing at human_review
+# serialises the whole state; resuming reads it back. LangGraph will refuse
+# to deserialise types it wasn't told about in a future release, so they're
+# declared here rather than left to a deprecation warning that only shows up
+# on the resume path -- the one path a reviewer actually depends on.
+_CHECKPOINTED_TYPES = (
+    Entity,
+    TrialBalanceLine,
+    ICTransaction,
+    TrialBalanceVariance,
+    ICException,
+    ExceptionType,
+    Materiality,
+    TriageResult,
+    TriageClassification,
+    ReviewDecision,
+    ReviewAction,
+    Elimination,
+    JournalLine,
+    JournalLineType,
+)
 
 
 def build_graph():
@@ -43,7 +71,8 @@ def build_graph():
     graph.add_edge("human_review", "finalize")
     graph.add_edge("finalize", END)
 
-    return graph.compile(checkpointer=MemorySaver())
+    serde = JsonPlusSerializer(allowed_msgpack_modules=_CHECKPOINTED_TYPES)
+    return graph.compile(checkpointer=MemorySaver(serde=serde))
 
 
 def run_close(
