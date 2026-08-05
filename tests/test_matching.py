@@ -5,8 +5,13 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from intercompany_close_agent.matching.engine import AMOUNT_TOLERANCE, match_transactions
-from intercompany_close_agent.models.exception import ExceptionType
+from intercompany_close_agent.matching.engine import (
+    AMOUNT_TOLERANCE,
+    MATERIALITY_THRESHOLD,
+    TIMING_TOLERANCE_DAYS,
+    match_transactions,
+)
+from intercompany_close_agent.models.exception import ExceptionType, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
 
 
@@ -69,3 +74,52 @@ def test_amount_mismatch_from_sign_flip():
     exc = result.exceptions[0]
     assert exc.exception_type == ExceptionType.AMOUNT_MISMATCH
     assert exc.net_amount == Decimal("6000.00")
+
+
+def test_amount_mismatch_materiality_bands():
+    small = [
+        _leg("US01", "DE01", "REF-6", "500.00"),
+        _leg("DE01", "US01", "REF-6", str(-Decimal("500.00") + Decimal("50.00"))),  # off by 50, below materiality
+    ]
+    result_small = match_transactions(small)
+    assert result_small.exceptions[0].materiality == Materiality.LOW
+
+    large = [
+        _leg("US01", "DE01", "REF-7", "500000.00"),
+        _leg("DE01", "US01", "REF-7", str(-Decimal("500000.00") + MATERIALITY_THRESHOLD)),
+    ]
+    result_large = match_transactions(large)
+    assert result_large.exceptions[0].materiality == Materiality.HIGH
+
+
+def test_timing_gap_flagged_even_when_amounts_match():
+    legs = [
+        _leg("US01", "DE01", "REF-8", "1000.00", txn_date=date(2025, 9, 20)),
+        _leg("DE01", "US01", "REF-8", "-1000.00", txn_date=date(2025, 9, 29)),  # 9 days later
+    ]
+    result = match_transactions(legs)
+    assert len(result.exceptions) == 1
+    assert result.exceptions[0].exception_type == ExceptionType.TIMING_GAP
+
+
+def test_timing_within_tolerance_is_clean():
+    # exactly TIMING_TOLERANCE_DAYS apart -- right at the boundary, still clean
+    assert TIMING_TOLERANCE_DAYS == 2
+    legs = [
+        _leg("US01", "DE01", "REF-9", "1000.00", txn_date=date(2025, 9, 28)),
+        _leg("DE01", "US01", "REF-9", "-1000.00", txn_date=date(2025, 9, 30)),
+    ]
+    result = match_transactions(legs)
+    assert result.exceptions == []
+    assert len(result.clean_pairs) == 1
+
+
+def test_duplicate_reference_flagged():
+    legs = [
+        _leg("US01", "DE01", "REF-10", "1000.00"),
+        _leg("DE01", "US01", "REF-10", "-1000.00"),
+        _leg("GB01", "US01", "REF-10", "1000.00"),  # a third leg sharing the same reference
+    ]
+    result = match_transactions(legs)
+    assert len(result.exceptions) == 1
+    assert result.exceptions[0].exception_type == ExceptionType.DUPLICATE_REFERENCE
