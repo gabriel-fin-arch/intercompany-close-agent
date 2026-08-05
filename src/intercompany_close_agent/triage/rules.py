@@ -20,7 +20,7 @@ from intercompany_close_agent.triage.models import TriageClassification, TriageR
 # REVIEW: this taxonomy reflects one reasonable read of what "needs a
 # human" means for an IC close -- validate it against your own group's
 # risk appetite before relying on it.
-_ALWAYS_NEEDS_JUDGMENT = {
+ALWAYS_NEEDS_JUDGMENT = {
     ExceptionType.MISSING_COUNTERPARTY,
     ExceptionType.DUPLICATE_REFERENCE,
     ExceptionType.COUNTERPARTY_MISMATCH,
@@ -57,7 +57,7 @@ def _manual_entities(exc: ICException, entities: dict[str, Entity] | None) -> li
 def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None) -> TriageResult:
     manual = _manual_entities(exc, entities)
 
-    if exc.exception_type in _ALWAYS_NEEDS_JUDGMENT:
+    if exc.exception_type in ALWAYS_NEEDS_JUDGMENT:
         rationale = (
             f"{exc.exception_type.value.replace('_', ' ')} exceptions are never auto-resolved "
             f"by the rule fallback: {exc.detected_reason}"
