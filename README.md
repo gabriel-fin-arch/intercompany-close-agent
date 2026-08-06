@@ -138,6 +138,13 @@ still mean nothing, because netting them applies an implicit 1:1 rate
 between two different currencies. Only genuine amount and period residuals
 get auto-resolved, and only when they're below the materiality threshold.
 
+Crucially, that rule is enforced **in code after the classifier returns**,
+not only in the prompt the model is given. An intercompany reference is free
+text submitted by an affiliate and it goes into that prompt verbatim, so a
+reference carrying "ignore prior instructions" is a realistic thing to find
+in a file. If a guarantee matters, it belongs somewhere the model can't
+see it.
+
 That taxonomy is a judgment call, not a law of nature. It's flagged with a
 `# REVIEW:` comment in `triage/rules.py` so it's easy to find and easy to
 disagree with. The full reasoning, including what approve, reject and edit
