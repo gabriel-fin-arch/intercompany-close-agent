@@ -126,24 +126,31 @@ details.
 
 ## 4. Where I put the human in the loop, and why
 
-Five exception types are **never** auto-resolved, regardless of dollar
+Six exception types are **never** auto-resolved, regardless of dollar
 amount: a missing counterparty booking, a balance booked against the wrong
-entity, an entity booked as its own counterparty, a reference shared by more
-than two legs, and two legs denominated in different currencies. None of
-them is really a question about *how much*. They're questions about *who*
-booked *what*, or in *what units*, and no rule engine or model should get to
-quietly decide that's fine because the number looks small. A currency
-mismatch is the sharpest example: the amounts can net to exactly zero and
+entity, an entity booked as its own counterparty, two legs booked on the
+same side (both receivable or both payable -- a sign error, not an amount
+error), a reference shared by more than two legs, and two legs denominated
+in different currencies. None of them is really a question about *how
+much*. They're questions about *who* booked *what*, in *what units*, or in
+*which direction*, and no rule engine or model should get to quietly decide
+that's fine because the number looks small. A currency mismatch is the
+sharpest example of the first: the amounts can net to exactly zero and
 still mean nothing, because netting them applies an implicit 1:1 rate
-between two different currencies. Only genuine amount and period residuals
-get auto-resolved, and only when they're below the materiality threshold.
+between two different currencies. A sign mismatch is the sharpest example
+of the last: the amounts can be identical to the cent, and the elimination
+would still net a completely made-up direction, since nothing in the ledger
+says which entity has it backwards. Only genuine amount and period
+residuals get auto-resolved, and only when they're below the materiality
+threshold.
 
-Crucially, that rule is enforced **in code after the classifier returns**,
-not only in the prompt the model is given. An intercompany reference is free
-text submitted by an affiliate and it goes into that prompt verbatim, so a
-reference carrying "ignore prior instructions" is a realistic thing to find
-in a file. If a guarantee matters, it belongs somewhere the model can't
-see it.
+Crucially, that rule -- and the materiality threshold, and the manually
+loaded-entity policy below -- is enforced **in code after the classifier
+returns**, not only in the prompt the model is given. An intercompany
+reference is free text submitted by an affiliate and it goes into that
+prompt verbatim, so a reference carrying "ignore prior instructions" is a
+realistic thing to find in a file. If a guarantee matters, it belongs
+somewhere the model can't see it.
 
 That taxonomy is a judgment call, not a law of nature. It's flagged with a
 `# REVIEW:` comment in `triage/rules.py` so it's easy to find and easy to

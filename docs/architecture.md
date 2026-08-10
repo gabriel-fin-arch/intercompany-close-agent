@@ -74,10 +74,11 @@ risk. Using an audit-derived number here would be technically defensible and
 operationally useless.
 
 **Materiality means different things per exception type, deliberately.** For
-an amount mismatch it bands the *unexplained residual*; for a missing
-counterparty, a counterparty mismatch or a timing gap it bands the *balance
-at risk*, because in those cases the residual isn't the interesting
-number: the whole balance is what's in question.
+an amount mismatch or a duplicate reference it bands the *net of the legs
+sharing that reference*; for a missing counterparty, a counterparty
+mismatch, self-dealing, a currency mismatch, or a timing gap it bands the
+*balance at risk* (the larger leg), because in those cases the residual
+isn't the interesting number: the whole balance is what's in question.
 
 **The tie-out tolerance is derived, not chosen.** It reuses the matching
 floor, because a group that calls a difference rounding noise when matching
@@ -155,16 +156,47 @@ runs:
 def triage_exception(exc, entities=None) -> TriageResult:
     if _llm_is_configured():
         try:
-            return llm_triage(exc, entities)
+            return _enforce_taxonomy(exc, llm_triage(exc, entities), entities)
         except Exception:
-            return rules_triage(exc, entities)   # network blip, rate limit, bad shape...
-    return rules_triage(exc, entities)
+            return _enforce_taxonomy(exc, rules_triage(exc, entities), entities)   # network blip, rate limit, bad shape...
+    return _enforce_taxonomy(exc, rules_triage(exc, entities), entities)
 ```
 
 A live model call failing mid-run doesn't take the close down. It falls
 back to the same deterministic rules used when no API key is configured at
 all. This is also what makes the offline mode more than a demo convenience:
 it's the same code path a flaky network hits in production.
+
+Note that neither branch returns a classifier's output directly --
+`_enforce_taxonomy` always sits between the classifier and the caller. See
+"The auto-resolve policy is re-checked in code" below.
+
+## The auto-resolve policy is re-checked in code
+
+Three things have to be true for an exception to be auto-resolved:
+
+1. its type isn't one of the five in `ALWAYS_NEEDS_JUDGMENT`,
+2. the residual is immaterial, and
+3. no entity on either side of the balance is manually loaded.
+
+All three are stated in `triage/llm.py`'s system prompt for the live model,
+and all three are implemented directly in `triage/rules.py` for the offline
+fallback. But `_enforce_taxonomy` (`triage/node.py`) re-checks all three
+again, in code, on whatever either path returns -- it isn't only the
+taxonomy that's reguarded there, despite the function's name surviving from
+before the other two checks were added.
+
+That matters because a prompt is a request, not a guarantee: an
+intercompany reference is free text typed by whoever submitted the balance,
+and it lands inside the prompt verbatim, so a reference carrying an
+instruction -- or a live model simply being wrong about materiality or an
+entity's data quality -- could return `auto_resolvable` for something that
+must never be. `_enforce_taxonomy` runs after the classifier either way, so
+nothing that arrives through a prompt can reach it. If the classifier
+disagrees with any part of the policy, the policy wins, and the override is
+recorded in the rationale the reviewer reads, alongside what the classifier
+originally said. See `tests/test_triage_node.py` for the cases this pins
+down, including a compromised-model test for each of the three checks.
 
 ## The interrupt
 
@@ -220,3 +252,38 @@ version of `finalize` called the two-leg function unconditionally and blew
 up on the first approved missing-counterparty case in the real synthetic
 dataset. See `tests/test_graph.py` and the `eliminations: support
 human-approved bookings with no counterparty leg` commit.
+
+A second case needed its own routing for the opposite reason: a
+`SIGN_MISMATCH` exception has two legs, but they point the same way, so
+there's no unambiguous receivable/payable pair to build an entry from
+either. `finalize` routes it around `build_elimination_from_exception`
+entirely and records that it needs manual resolution instead.
+
+## An elimination can still leave a residual, and that's reported, not hidden
+
+`build_elimination_from_exception()` books at the receivable leg's own
+amount by default (or a reviewer's override) -- not the residual, and not
+something in between. When that amount doesn't match what the *other*
+entity actually booked (an `AMOUNT_MISMATCH` residual that was auto-resolved
+below materiality, or a human approval with no override), the payable
+side's control account won't net to zero after the entry posts. That's the
+same category of problem `reconcile` checks for before matching starts,
+just introduced by the elimination itself instead of by the original
+booking.
+
+`eliminations.engine.elimination_residuals()` computes it -- per entity, the
+difference between what that entity's leg said and what actually got posted
+against its control account -- and `finalize` appends a line to
+`audit_trail` for every nonzero one it finds:
+
+```
+ROYALTY-2025-1001: eliminated at 246809.45, but GB01's control account
+carries an unexplained residual of 3085.12 after posting
+```
+
+This doesn't fix the underlying gap -- there's no honest way to invent the
+correct number from two disagreeing legs -- but it means the gap shows up
+next to the elimination that caused it, instead of only turning up the next
+time someone runs a tie-out and wonders why a balance that was supposedly
+eliminated still isn't zero. See `tests/test_eliminations.py` and
+`tests/test_graph.py::test_finalize_surfaces_a_control_account_residual_left_by_an_elimination`.

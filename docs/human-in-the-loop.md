@@ -7,7 +7,7 @@ working out what it should never be allowed to decide on its own.
 
 ## The rule
 
-Five exception types are **never** auto-resolved, no matter how small the
+Six exception types are **never** auto-resolved, no matter how small the
 dollar amount:
 
 | Exception type | Why it's always a human call |
@@ -16,6 +16,7 @@ dollar amount:
 | `counterparty_mismatch` | The balance landed against the wrong legal entity. Silently reassigning it might net the group total to the right number, but it would misstate which entity actually owes what. That matters for local statutory filings, for transfer pricing, and for legal entity-level results, not only for the consolidated view. |
 | `self_dealing` | An entity is booked as its own counterparty, so nothing here is a real intercompany balance. It's a mapping error upstream. The legs net to zero perfectly, which is what makes it dangerous: without an explicit check it passes as clean and produces an entry that debits and credits the same entity. |
 | `currency_mismatch` | The two legs are denominated in different currencies. Netting them applies an implicit 1:1 rate between, say, EUR and USD, and FX translation is out of scope here, so there is no rate to apply. The amounts can look like they reconcile perfectly and still mean nothing. |
+| `sign_mismatch` | Both legs are booked on the same side -- both receivable, or both payable -- instead of one of each. At least one entity has the sign backwards, and the ledger doesn't say which. This is a direction problem, not a size problem: the amounts can match to the cent and the elimination would still net in an arbitrary, possibly wrong, direction if it were booked automatically. |
 | `duplicate_reference` | More than two legs share a reference. There's no way to know which pairing is correct without more information than the ledger itself carries. Guessing wrong means eliminating the wrong balance and leaving the real one standing. |
 
 Everything else can be auto-resolved: an amount that's off by more than
@@ -50,9 +51,11 @@ of this project.
 
 Two things guard against it, and only one of them is load-bearing:
 
-1. **The taxonomy is re-checked in code after the classifier returns**
-   (`_enforce_taxonomy` in `triage/node.py`). If the result says
-   auto-resolvable for a type that must never be, it's overridden and the
+1. **The whole auto-resolve policy is re-checked in code after the
+   classifier returns** (`_enforce_taxonomy` in `triage/node.py`), not only
+   the taxonomy. If the result says auto-resolvable for a type that must
+   never be, for a residual above the materiality threshold, or for a
+   balance touching a manually loaded entity, it's overridden and the
    override is written into the rationale the reviewer reads, along with
    whatever the classifier originally said. Nothing that arrives through a
    prompt can reach this check. This is the guarantee.
@@ -61,9 +64,9 @@ Two things guard against it, and only one of them is load-bearing:
    itself off as instructions. This is hygiene, not protection, and it is
    deliberately not relied on.
 
-`tests/test_triage_node.py` pins both down, including a test that stands in
-a model which has already been talked into returning auto-resolvable and
-asserts the exception is escalated anyway.
+`tests/test_triage_node.py` pins both down, including a test per rule that
+stands in a model which has already been talked into returning
+auto-resolvable and asserts the exception is escalated anyway.
 
 The general shape of this is worth stating plainly, because it applies well
 beyond intercompany: **if a guarantee matters, it belongs in code the model
@@ -82,7 +85,11 @@ when the data path itself is the weak link.
 
 So `Entity.interfaced` isn't decoration. Triage reads it (`triage/rules.py`,
 and it's passed to the model in `triage/llm.py`), and it can change the
-outcome on its own.
+outcome on its own. Like the taxonomy, this isn't only the offline path's
+behavior: `_enforce_taxonomy` (`triage/node.py`) re-applies the same check
+to whatever the live model returns, so a model that judges a manually keyed
+balance safe to auto-resolve gets overridden on the way out, the same as a
+model that misjudges materiality.
 
 Note that this is written as a **policy**, not as a confidence penalty tuned
 until it happened to fall below some threshold. Both produce the same
@@ -112,10 +119,10 @@ specific exception is eligible for auto-resolution, decide whether this
 specific instance still looks safe, and write the rationale. It never gets
 to redraw the boundary.
 
-That's also why the taxonomy lives in code with `# REVIEW:` comments beside
-it (`matching/engine.py`, `triage/rules.py`) instead of being buried in a
-prompt. Anyone auditing this system should be able to find "what gets
-auto-resolved" with one `grep`, not by reading transcripts.
+That's also why the taxonomy lives in code with a `# REVIEW:` comment beside
+it (`triage/rules.py`) instead of being buried in a prompt. Anyone auditing
+this system should be able to find "what gets auto-resolved" with one
+`grep`, not by reading transcripts.
 
 ## What "approve / reject / edit" actually books
 
@@ -125,14 +132,26 @@ maps to a specific, auditable outcome in `finalize` (`graph/nodes.py`):
 - **Approve** books an elimination using the exception's own legs, or, for a
   `missing_counterparty` case, using a human-supplied amount, since there's
   no second leg to derive one from. The narrative records who approved it
-  and why.
+  and why. Approving an `amount_mismatch` or `timing_gap` books at the
+  receivable leg's own amount, which is exact for that entity but may not
+  match what the payable entity booked -- see "An elimination can still
+  leave a residual" in `docs/architecture.md` for what happens to that gap.
+  A `sign_mismatch` case is the one exception where approval alone still
+  doesn't produce a booking at all: both legs point the same way, so
+  there's no unambiguous receivable/payable pair to build an entry from
+  even after a human signs off. The audit trail records that it needs
+  resolution offline (fixing whichever entity's booking has the sign
+  backwards) before it can be eliminated at all.
 - **Reject** books nothing. The balance stays open at group level. This is a
   legitimate recorded outcome rather than a dead end: it means "don't
   eliminate this without more information," and the audit trail says so
   explicitly instead of letting the item quietly disappear.
 - **Edit** books an elimination at a reviewer-supplied amount instead of the
   raw residual, for cases where the correct amount is knowable but isn't
-  what either system leg says (a manually confirmed true-up, say).
+  what either system leg says (a manually confirmed true-up, say). An
+  override that doesn't exactly match either leg leaves the same kind of
+  residual an unedited approval can, on either side, and it's reported the
+  same way.
 
 Every path leaves a trail: which exceptions were auto-resolved and by what
 rule or model call, which were escalated, what a human decided and when.
