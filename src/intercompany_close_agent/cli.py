@@ -36,7 +36,7 @@ def _load_entities(path: Path) -> list[Entity]:
 
 @app.command("generate-data")
 def generate_data(
-    seed: int = typer.Option(42, help="RNG seed"),
+    seed: int = typer.Option(14, help="RNG seed"),
     pairs: int = typer.Option(26, help="Number of IC pairs to generate before anomalies"),
     out_dir: Path = typer.Option(DEFAULT_DATA_DIR, help="Where to write the CSVs"),
 ) -> None:
