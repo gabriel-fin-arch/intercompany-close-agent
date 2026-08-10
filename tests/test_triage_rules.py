@@ -48,6 +48,11 @@ def test_duplicate_reference_always_needs_judgment():
     assert result.classification == TriageClassification.NEEDS_HUMAN_JUDGMENT
 
 
+def test_sign_mismatch_always_needs_judgment_even_if_low_materiality():
+    result = triage_exception(_exc(ExceptionType.SIGN_MISMATCH, Materiality.LOW))
+    assert result.classification == TriageClassification.NEEDS_HUMAN_JUDGMENT
+
+
 def test_low_materiality_amount_mismatch_is_auto_resolvable():
     result = triage_exception(_exc(ExceptionType.AMOUNT_MISMATCH, Materiality.LOW))
     assert result.classification == TriageClassification.AUTO_RESOLVABLE

@@ -22,6 +22,7 @@ class ExceptionType(StrEnum):
     COUNTERPARTY_MISMATCH = "counterparty_mismatch"
     SELF_DEALING = "self_dealing"
     CURRENCY_MISMATCH = "currency_mismatch"
+    SIGN_MISMATCH = "sign_mismatch"
     AMOUNT_MISMATCH = "amount_mismatch"
     TIMING_GAP = "timing_gap"
     DUPLICATE_REFERENCE = "duplicate_reference"
