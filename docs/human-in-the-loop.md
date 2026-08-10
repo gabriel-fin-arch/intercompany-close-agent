@@ -136,12 +136,15 @@ maps to a specific, auditable outcome in `finalize` (`graph/nodes.py`):
   receivable leg's own amount, which is exact for that entity but may not
   match what the payable entity booked -- see "An elimination can still
   leave a residual" in `docs/architecture.md` for what happens to that gap.
-  A `sign_mismatch` case is the one exception where approval alone still
+  A `sign_mismatch` case is one exception where approval alone still
   doesn't produce a booking at all: both legs point the same way, so
   there's no unambiguous receivable/payable pair to build an entry from
-  even after a human signs off. The audit trail records that it needs
-  resolution offline (fixing whichever entity's booking has the sign
-  backwards) before it can be eliminated at all.
+  even after a human signs off. A plain `approve` on a `currency_mismatch`
+  is the other: booking at either leg's own amount would apply exactly the
+  implicit 1:1 rate the type exists to refuse, so approval alone books
+  nothing there either. Both record that they need resolution offline (or
+  an edit, for the currency case) instead of eliminating at a number
+  nobody actually confirmed.
 - **Reject** books nothing. The balance stays open at group level. This is a
   legitimate recorded outcome rather than a dead end: it means "don't
   eliminate this without more information," and the audit trail says so
@@ -151,7 +154,10 @@ maps to a specific, auditable outcome in `finalize` (`graph/nodes.py`):
   what either system leg says (a manually confirmed true-up, say). An
   override that doesn't exactly match either leg leaves the same kind of
   residual an unedited approval can, on either side, and it's reported the
-  same way.
+  same way. For `currency_mismatch`, edit is the *only* path that books
+  anything, and the amount is expected already converted to the reporting
+  currency -- there's no FX field anywhere in this model for the system to
+  do that conversion itself.
 
 Every path leaves a trail: which exceptions were auto-resolved and by what
 rule or model call, which were escalated, what a human decided and when.
