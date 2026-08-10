@@ -39,8 +39,8 @@ def test_run_pauses_for_human_review_on_real_dataset(monkeypatch):
 
     _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-1")
 
-    # the synthetic dataset has real missing-counterparty / counterparty-mismatch
-    # exceptions in it, so this run should hit the interrupt
+    # the synthetic dataset has real exceptions in it (missing-counterparty,
+    # amount-mismatch, ...), so this run should hit the interrupt
     assert "__interrupt__" in result
     pending = result["__interrupt__"][0].value["pending_review"]
     assert len(pending) > 0
@@ -192,6 +192,75 @@ def test_every_checkpointed_type_is_declared_to_the_serializer(monkeypatch):
 
     assert seen, "the paused state should contain our own types"
     assert seen <= declared, f"undeclared in _CHECKPOINTED_TYPES: {sorted(seen - declared)}"
+
+
+def test_sign_mismatch_never_auto_resolves_and_is_never_booked_on_approval(monkeypatch):
+    """A sign-flip (both legs booked on the same side) is a real bug in the
+    synthetic dataset (see anomaly_sign_flip). It should always land in the
+    reviewer worklist, and approving it still shouldn't produce an
+    elimination -- there's no unambiguous receivable/payable pair to build
+    one from, so it needs offline resolution rather than a booking."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-7")
+
+    sign_mismatch_refs = {
+        exc.reference for exc in result["exceptions"] if exc.exception_type == ExceptionType.SIGN_MISMATCH
+    }
+    assert sign_mismatch_refs, "the synthetic dataset should contain at least one sign mismatch"
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    pending_refs = {item["reference"] for item in pending}
+    assert sign_mismatch_refs.issubset(pending_refs)
+
+    decisions = [
+        {"reference": item["reference"], "action": ReviewAction.APPROVE.value, "reviewer_note": "test approval"}
+        for item in pending
+    ]
+    final = resume_close(graph, config, decisions)
+
+    booked = {e.reference for e in final["eliminations"]}
+    assert not (sign_mismatch_refs & booked)
+    for ref in sign_mismatch_refs:
+        assert any(ref in entry and "not booked automatically" in entry for entry in final["audit_trail"])
+
+
+def test_finalize_surfaces_a_control_account_residual_left_by_an_elimination(monkeypatch):
+    """An amount_mismatch exception's two legs don't net to zero -- that's
+    the whole reason it's an exception. Eliminating it books at the
+    receivable leg's own amount, which leaves the payable entity's control
+    account short (or over) by whatever didn't net -- that has to show up
+    in the audit trail, not disappear. Finds a real one in the shipped
+    dataset rather than hardcoding a reference, so this doesn't silently
+    stop testing anything the next time the dataset is regenerated."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-9")
+    assert "__interrupt__" in result
+
+    amount_mismatches = [exc for exc in result["exceptions"] if exc.exception_type == ExceptionType.AMOUNT_MISMATCH]
+    target_exc = next(
+        (exc for exc in amount_mismatches if abs(exc.legs[0].amount) != abs(exc.legs[1].amount)), None
+    )
+    assert target_exc is not None, "fixture dataset should contain an amount mismatch with a genuine residual"
+    payable_leg = next(leg for leg in target_exc.legs if leg.amount < 0)
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    decisions = [
+        {"reference": item["reference"], "action": ReviewAction.APPROVE.value, "reviewer_note": "test"}
+        for item in pending
+    ]
+    final = resume_close(graph, config, decisions)
+
+    assert target_exc.reference in {e.reference for e in final["eliminations"]}
+    assert any(
+        target_exc.reference in entry and "unexplained residual" in entry and payable_leg.entity_code in entry
+        for entry in final["audit_trail"]
+    )
 
 
 def test_missing_counterparty_never_auto_resolves(monkeypatch):
