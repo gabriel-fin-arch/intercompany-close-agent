@@ -194,6 +194,78 @@ def test_every_checkpointed_type_is_declared_to_the_serializer(monkeypatch):
     assert seen <= declared, f"undeclared in _CHECKPOINTED_TYPES: {sorted(seen - declared)}"
 
 
+def test_currency_mismatch_approved_without_an_override_is_not_booked(monkeypatch):
+    """Legs in different currencies have no FX rate to net them. Approving
+    alone (no reviewer-supplied amount) mustn't book at either leg's own,
+    currency-ambiguous amount -- that would apply exactly the implicit 1:1
+    rate this exception type exists to refuse."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-currency-1")
+    assert "__interrupt__" in result
+
+    currency_mismatches = {
+        exc.reference for exc in result["exceptions"] if exc.exception_type == ExceptionType.CURRENCY_MISMATCH
+    }
+    assert currency_mismatches, "fixture dataset should contain a currency mismatch"
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    assert any(item["reference"] in currency_mismatches and item["net_amount"] is None for item in pending)
+
+    decisions = [
+        {"reference": item["reference"], "action": ReviewAction.APPROVE.value, "reviewer_note": "test"}
+        for item in pending
+    ]
+    final = resume_close(graph, config, decisions)
+
+    booked = {e.reference for e in final["eliminations"]}
+    assert not (currency_mismatches & booked)
+    for ref in currency_mismatches:
+        assert any(
+            ref in entry and "not booked automatically" in entry and "currencies" in entry
+            for entry in final["audit_trail"]
+        )
+
+
+def test_currency_mismatch_with_an_override_amount_is_booked(monkeypatch):
+    """Edit is the one path that can book a currency mismatch: the reviewer
+    supplies the amount, already converted to the reporting currency."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-currency-2")
+
+    target = next(
+        exc.reference for exc in result["exceptions"] if exc.exception_type == ExceptionType.CURRENCY_MISMATCH
+    )
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    decisions = []
+    for item in pending:
+        if item["reference"] == target:
+            decisions.append(
+                {
+                    "reference": target,
+                    "action": ReviewAction.EDIT.value,
+                    "reviewer_note": "converted at the confirmed month-end rate",
+                    "override_amount": "50000.00",
+                }
+            )
+        else:
+            decisions.append({"reference": item["reference"], "action": ReviewAction.REJECT.value})
+
+    final = resume_close(graph, config, decisions)
+
+    booked = {e.reference for e in final["eliminations"]}
+    assert target in booked
+    elimination = next(e for e in final["eliminations"] if e.reference == target)
+    assert all(line.amount == Decimal("50000.00") for line in elimination.lines)
+    assert "converted at the confirmed month-end rate" in elimination.narrative
+
+
 def test_sign_mismatch_never_auto_resolves_and_is_never_booked_on_approval(monkeypatch):
     """A sign-flip (both legs booked on the same side) is a real bug in the
     synthetic dataset (see anomaly_sign_flip). It should always land in the
@@ -276,6 +348,7 @@ def test_missing_counterparty_never_auto_resolves(monkeypatch):
     missing_counterparty_refs = {
         exc.reference for exc in result["exceptions"] if exc.exception_type == ExceptionType.MISSING_COUNTERPARTY
     }
-    if missing_counterparty_refs:
-        pending_refs = {item["reference"] for item in result["__interrupt__"][0].value["pending_review"]}
-        assert missing_counterparty_refs.issubset(pending_refs)
+    assert missing_counterparty_refs, "fixture dataset should contain a missing counterparty"
+
+    pending_refs = {item["reference"] for item in result["__interrupt__"][0].value["pending_review"]}
+    assert missing_counterparty_refs.issubset(pending_refs)

@@ -42,7 +42,7 @@ Loaded 7 entities, 53 IC transaction legs
       why: 3 legs share reference MGMT-FEE-2025-1009; expected exactly 2.
       triage (confidence 0.95): duplicate reference exceptions are never auto-resolved by the rule fallback: 3 legs share reference MGMT-FEE-2025-1009; expected exactly 2.
   [HIGH] ROYALTY-2025-1010 -- currency_mismatch
-      net amount: 0
+      net amount: n/a -- different currencies, no FX rate to net
       why: ROYALTY-2025-1010: MX01 booked USD and ZA01 booked ZAR; the two legs cannot be netted without an FX rate.
       triage (confidence 0.95): currency mismatch exceptions are never auto-resolved by the rule fallback: ROYALTY-2025-1010: MX01 booked USD and ZA01 booked ZAR; the two legs cannot be netted without an FX rate. Worth checking the manual load first -- ZA01 keys its data in by hand.
   [HIGH] ROYALTY-2025-1014 -- missing_counterparty

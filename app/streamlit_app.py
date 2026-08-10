@@ -118,7 +118,8 @@ elif "__interrupt__" in result:
     for item in pending:
         header = f"[{item['materiality'].upper()}] {item['reference']} -- {item['exception_type']}"
         with st.expander(header, expanded=True):
-            st.write(f"**Net amount:** {item['net_amount']}")
+            net_amount = item["net_amount"] or "n/a -- different currencies, no FX rate to net"
+            st.write(f"**Net amount:** {net_amount}")
             st.write(f"**Why:** {item['detected_reason']}")
             st.write(f"**Triage rationale** (confidence {item['confidence']:.2f}): {item['rationale']}")
 
@@ -131,10 +132,13 @@ elif "__interrupt__" in result:
             note = st.text_input("Reviewer note", key=f"note_{item['reference']}")
             override_amount = None
             if action == ReviewAction.EDIT.value:
+                # Left blank rather than defaulted when there's no net_amount
+                # (CURRENCY_MISMATCH) -- pre-filling "n/a" would just be a
+                # different way of handing back an unparseable amount.
                 override_amount = st.text_input(
                     "Amount to eliminate",
                     key=f"amount_{item['reference']}",
-                    value=item["net_amount"],
+                    value=item["net_amount"] or "",
                     help="Exact decimal amount, e.g. 1234.56",
                 )
 

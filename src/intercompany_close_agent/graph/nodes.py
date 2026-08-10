@@ -106,7 +106,11 @@ def human_review(state: CloseState) -> dict:
             "reference": ref,
             "exception_type": exc.exception_type.value,
             "materiality": exc.materiality.value,
-            "net_amount": str(exc.net_amount),
+            # None for CURRENCY_MISMATCH -- kept as None here rather than
+            # stringified, so the CLI and dashboard can each render "not
+            # applicable" instead of a literal "None" or "0" that a reviewer
+            # editing the amount could end up submitting as-is.
+            "net_amount": str(exc.net_amount) if exc.net_amount is not None else None,
             "detected_reason": exc.detected_reason,
             "rationale": triage_by_reference[ref].rationale,
             "confidence": triage_by_reference[ref].confidence,
@@ -187,6 +191,18 @@ def finalize(state: CloseState) -> dict:
                 f"{ref}: approved but not booked automatically -- both legs share a sign, "
                 f"so which side has it backwards isn't knowable from the ledger; needs manual "
                 f"resolution"
+            )
+        elif exc.exception_type == ExceptionType.CURRENCY_MISMATCH and decision.override_amount is None:
+            # Approving alone books at one leg's own amount -- fine for an
+            # AMOUNT_MISMATCH, where both legs are in the same currency, but
+            # here that would apply exactly the implicit 1:1 rate this
+            # exception type exists to refuse. Only a reviewer-supplied
+            # amount (via edit), already converted to the reporting
+            # currency, is safe to book.
+            notes.append(
+                f"{ref}: approved but not booked automatically -- legs are in different "
+                f"currencies with no FX rate to net them; needs a reviewer-supplied amount "
+                f"or manual resolution"
             )
         elif len(exc.legs) == 2:
             elim = build_elimination_from_exception(exc, note=note, override_amount=decision.override_amount)
