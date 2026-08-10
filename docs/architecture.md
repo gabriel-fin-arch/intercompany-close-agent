@@ -175,7 +175,7 @@ Note that neither branch returns a classifier's output directly --
 
 Three things have to be true for an exception to be auto-resolved:
 
-1. its type isn't one of the five in `ALWAYS_NEEDS_JUDGMENT`,
+1. its type isn't one of the six in `ALWAYS_NEEDS_JUDGMENT`,
 2. the residual is immaterial, and
 3. no entity on either side of the balance is manually loaded.
 
