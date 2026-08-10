@@ -68,11 +68,11 @@ in ways that matter:
   elapsed days is the wrong question.
 - **Some exception types are never "small enough to auto-resolve."** A
   missing counterparty booking, a balance against the wrong entity, an
-  entity booked as its own counterparty, two legs in different currencies,
-  a reference shared by more than two legs: all five are control questions
-  rather than amount questions, and the dollar value doesn't make any of
-  them safe to wave through. See `docs/human-in-the-loop.md` for the
-  reasoning on each.
+  entity booked as its own counterparty, two legs booked on the same side
+  instead of one of each, two legs in different currencies, a reference
+  shared by more than two legs: all six are control questions rather than
+  amount questions, and the dollar value doesn't make any of them safe to
+  wave through. See `docs/human-in-the-loop.md` for the reasoning on each.
 - **You tie out before you eliminate.** Before matching anything, the
   pipeline checks each entity's IC subledger against its intercompany
   control accounts on the trial balance. A balance that won't match its
