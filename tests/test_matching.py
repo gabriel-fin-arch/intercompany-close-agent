@@ -102,7 +102,12 @@ def test_counterparty_mismatch():
     assert result.exceptions[0].exception_type == ExceptionType.COUNTERPARTY_MISMATCH
 
 
-def test_amount_mismatch_from_sign_flip():
+def test_sign_flip_is_a_sign_mismatch_not_an_amount_mismatch():
+    """Both legs booked on the same side is a different failure mode from an
+    amount that's merely off: there's no residual to band, and no way to
+    tell which entity has the sign backwards. It must never be lumped in
+    with AMOUNT_MISMATCH, which eliminations/engine.py trusts to always have
+    one receivable leg and one payable leg."""
     legs = [
         _leg("US01", "DE01", "REF-5", "3000.00"),
         _leg("DE01", "US01", "REF-5", "3000.00"),  # should have been -3000.00
@@ -110,8 +115,28 @@ def test_amount_mismatch_from_sign_flip():
     result = match_transactions(legs)
     assert len(result.exceptions) == 1
     exc = result.exceptions[0]
-    assert exc.exception_type == ExceptionType.AMOUNT_MISMATCH
+    assert exc.exception_type == ExceptionType.SIGN_MISMATCH
     assert exc.net_amount == Decimal("6000.00")
+
+
+def test_sign_mismatch_materiality_is_the_balance_at_risk():
+    legs = [
+        _leg("US01", "DE01", "REF-SIGN-BIG", "500000.00"),
+        _leg("DE01", "US01", "REF-SIGN-BIG", "500000.00"),  # both receivable
+    ]
+    result = match_transactions(legs)
+    assert result.exceptions[0].materiality == Materiality.HIGH
+
+
+def test_a_leg_with_zero_amount_is_not_a_sign_mismatch():
+    """Zero has no sign, so it shouldn't trip the same-direction check --
+    whatever's wrong with a zero-amount leg, it isn't this."""
+    legs = [
+        _leg("US01", "DE01", "REF-ZERO", "0.00"),
+        _leg("DE01", "US01", "REF-ZERO", "0.00"),
+    ]
+    result = match_transactions(legs)
+    assert result.clean_pairs and not result.exceptions
 
 
 def test_amount_mismatch_materiality_bands():
