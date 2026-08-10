@@ -74,11 +74,12 @@ def _describe(exc: ICException, entities: dict[str, Entity] | None = None) -> st
         f"{leg.entity_code} vs {leg.counterparty_code}: {leg.amount} {leg.currency} on {leg.transaction_date}"
         for leg in exc.legs
     )
+    net_amount = exc.net_amount if exc.net_amount is not None else "not applicable (legs are in different currencies)"
     description = (
         f"reference={_flatten(exc.reference)}\n"
         f"exception_type={exc.exception_type.value}\n"
         f"materiality={exc.materiality.value}\n"
-        f"net_amount={exc.net_amount}\n"
+        f"net_amount={net_amount}\n"
         f"detected_reason={_flatten(exc.detected_reason)}\n"
         f"legs: {_flatten(legs_desc)}"
     )
