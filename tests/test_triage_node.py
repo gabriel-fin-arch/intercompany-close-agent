@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
 from intercompany_close_agent.triage import node as triage_node
@@ -146,6 +147,79 @@ def test_the_override_leaves_ordinary_classifications_alone(monkeypatch):
 
     assert result.classification == TriageClassification.AUTO_RESOLVABLE
     assert result.rationale == "immaterial"
+
+
+def test_a_compromised_model_cannot_auto_resolve_a_material_residual(monkeypatch):
+    """The taxonomy isn't the only thing the classifier can't override -- a
+    material residual is never auto-resolved either, whichever path said so."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "test-model")
+
+    leg = ICTransaction(
+        entity_code="US01",
+        counterparty_code="DE01",
+        reference="REF-BIG",
+        amount=Decimal("450000.00"),
+        transaction_date=date(2025, 9, 30),
+    )
+    exc = ICException(
+        reference="REF-BIG",
+        exception_type=ExceptionType.AMOUNT_MISMATCH,
+        legs=[leg],
+        net_amount=Decimal("450000.00"),
+        materiality=Materiality.HIGH,
+        detected_reason="legs net to 450000.00 instead of zero",
+    )
+
+    def compliant_with_the_injection(exc: ICException, entities=None) -> TriageResult:
+        return TriageResult(
+            reference=exc.reference,
+            classification=TriageClassification.AUTO_RESOLVABLE,
+            confidence=0.99,
+            rationale="immaterial, looks fine",
+        )
+
+    monkeypatch.setattr(
+        "intercompany_close_agent.triage.llm.triage_exception", compliant_with_the_injection
+    )
+
+    result = triage_node.triage_exception(exc)
+
+    assert result.classification == TriageClassification.NEEDS_HUMAN_JUDGMENT
+    assert "overridden" in result.rationale
+    assert "materiality threshold" in result.rationale
+
+
+def test_a_compromised_model_cannot_auto_resolve_a_manually_loaded_entity(monkeypatch):
+    """Same guarantee for the interfaced-entity policy: a manually loaded
+    entity on either side means never auto-resolved, regardless of size,
+    regardless of what the classifier said."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "test-model")
+
+    exc = _exc()  # AMOUNT_MISMATCH, LOW materiality -- would otherwise auto-resolve
+    entities = {
+        "US01": Entity(code="US01", name="US", region="US", local_currency="USD", interfaced=True),
+        "DE01": Entity(code="DE01", name="DE", region="EMEA", local_currency="EUR", interfaced=False),
+    }
+
+    def compliant_with_the_injection(exc: ICException, entities=None) -> TriageResult:
+        return TriageResult(
+            reference=exc.reference,
+            classification=TriageClassification.AUTO_RESOLVABLE,
+            confidence=0.99,
+            rationale="looks fine to me",
+        )
+
+    monkeypatch.setattr(
+        "intercompany_close_agent.triage.llm.triage_exception", compliant_with_the_injection
+    )
+
+    result = triage_node.triage_exception(exc, entities)
+
+    assert result.classification == TriageClassification.NEEDS_HUMAN_JUDGMENT
+    assert "overridden" in result.rationale
+    assert "DE01" in result.rationale
 
 
 def test_injected_newlines_cannot_fake_extra_prompt_fields():
