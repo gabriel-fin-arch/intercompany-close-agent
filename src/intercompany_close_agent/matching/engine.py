@@ -174,12 +174,15 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
             # different currencies. FX translation is out of scope for this
             # project, so there is no rate to apply and no honest way to net
             # them -- it goes to a human, whatever the amounts look like.
+            # net_amount is None, not zero: a literal 0 would read as "these
+            # legs net out fine," which is exactly backwards for the one
+            # exception type where nothing can be netted at all.
             exceptions.append(
                 ICException(
                     reference=reference,
                     exception_type=ExceptionType.CURRENCY_MISMATCH,
                     legs=legs,
-                    net_amount=Decimal("0"),
+                    net_amount=None,
                     materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
                     detected_reason=(
                         f"{reference}: {leg_a.entity_code} booked {leg_a.currency} and "

@@ -223,6 +223,9 @@ def test_currency_mismatch_is_never_netted():
     assert result.clean_pairs == []
     assert len(result.exceptions) == 1
     assert result.exceptions[0].exception_type == ExceptionType.CURRENCY_MISMATCH
+    # None, not zero -- there's nothing to sum across two different
+    # currencies, and a literal 0 would misleadingly read as "these net fine"
+    assert result.exceptions[0].net_amount is None
 
 
 def test_duplicate_reference_flagged():
