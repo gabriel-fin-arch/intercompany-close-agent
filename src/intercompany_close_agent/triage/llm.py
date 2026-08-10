@@ -27,9 +27,10 @@ reviewer's judgment before anything gets booked or eliminated.
 
 Only classify something as auto_resolvable when the residual is genuinely \
 immaterial and there is no control concern. A missing counterparty booking, \
-a balance booked against the wrong entity, or a reference shared by more \
-than two legs should always need human judgment -- no exceptions, regardless \
-of the dollar amount.
+a balance booked against the wrong entity, two legs booked on the same side \
+(both receivable or both payable, so no one can tell which one has the sign \
+backwards), or a reference shared by more than two legs should always need \
+human judgment -- no exceptions, regardless of the dollar amount.
 
 If any entity involved is flagged as manually loaded, lower your confidence \
 accordingly: that data was keyed in by hand rather than arriving through a \
