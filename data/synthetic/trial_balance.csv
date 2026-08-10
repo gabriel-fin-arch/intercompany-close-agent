@@ -1,50 +1,50 @@
 entity_code,account_code,account_name,balance
-US01,1000-IC-REC,Intercompany Receivable,493576.11
-US01,2000-IC-PAY,Intercompany Payable,-560564.54
-US01,1100-CASH,Cash and Equivalents,1464699.48
-US01,3000-EQ,Retained Earnings,804570.70
-US01,4000-REV,Revenue,1690495.74
-US01,5000-COGS,Cost of Goods Sold,-314209.08
-US01,6000-OPEX,Operating Expenses,1541725.88
-DE01,1000-IC-REC,Intercompany Receivable,702340.76
-DE01,2000-IC-PAY,Intercompany Payable,-364041.02
-DE01,1100-CASH,Cash and Equivalents,929972.22
-DE01,3000-EQ,Retained Earnings,1555771.15
-DE01,4000-REV,Revenue,-162414.19
-DE01,5000-COGS,Cost of Goods Sold,-155351.79
-DE01,6000-OPEX,Operating Expenses,1271005.12
-GB01,1000-IC-REC,Intercompany Receivable,456420.53
-GB01,2000-IC-PAY,Intercompany Payable,-373896.30
-GB01,1100-CASH,Cash and Equivalents,775826.41
-GB01,3000-EQ,Retained Earnings,975867.79
-GB01,4000-REV,Revenue,-56740.70
-GB01,5000-COGS,Cost of Goods Sold,211505.96
-GB01,6000-OPEX,Operating Expenses,916463.52
-IE01,1000-IC-REC,Intercompany Receivable,308305.31
-IE01,2000-IC-PAY,Intercompany Payable,-184817.60
-IE01,1100-CASH,Cash and Equivalents,1841919.61
-IE01,3000-EQ,Retained Earnings,1128313.14
-IE01,4000-REV,Revenue,635852.25
-IE01,5000-COGS,Cost of Goods Sold,68541.46
-IE01,6000-OPEX,Operating Expenses,1993533.17
-BR01,1000-IC-REC,Intercompany Receivable,65021.34
-BR01,2000-IC-PAY,Intercompany Payable,-438604.18
-BR01,1100-CASH,Cash and Equivalents,947661.91
-BR01,3000-EQ,Retained Earnings,1527399.57
-BR01,4000-REV,Revenue,1459393.78
-BR01,5000-COGS,Cost of Goods Sold,1351849.33
-BR01,6000-OPEX,Operating Expenses,39960.77
-MX01,1000-IC-REC,Intercompany Receivable,1019681.32
-MX01,2000-IC-PAY,Intercompany Payable,-342387.39
-MX01,1100-CASH,Cash and Equivalents,1413807.82
-MX01,3000-EQ,Retained Earnings,336757.05
-MX01,4000-REV,Revenue,571036.79
-MX01,5000-COGS,Cost of Goods Sold,1303045.95
-MX01,6000-OPEX,Operating Expenses,1244503.12
-ZA01,1000-IC-REC,Intercompany Receivable,319748.53
-ZA01,2000-IC-PAY,Intercompany Payable,-459783.83
-ZA01,1100-CASH,Cash and Equivalents,502393.03
-ZA01,3000-EQ,Retained Earnings,676015.94
-ZA01,4000-REV,Revenue,1914883.16
-ZA01,5000-COGS,Cost of Goods Sold,889357.07
-ZA01,6000-OPEX,Operating Expenses,711948.88
+US01,1000-IC-REC,Intercompany Receivable,519709.49
+US01,2000-IC-PAY,Intercompany Payable,-566068.44
+US01,1100-CASH,Cash and Equivalents,1670400.38
+US01,3000-EQ,Retained Earnings,1447223.65
+US01,4000-REV,Revenue,-38559.80
+US01,5000-COGS,Cost of Goods Sold,-106581.71
+US01,6000-OPEX,Operating Expenses,-453906.38
+DE01,1000-IC-REC,Intercompany Receivable,234026.64
+DE01,2000-IC-PAY,Intercompany Payable,-224206.52
+DE01,1100-CASH,Cash and Equivalents,1293347.60
+DE01,3000-EQ,Retained Earnings,1937976.96
+DE01,4000-REV,Revenue,96026.21
+DE01,5000-COGS,Cost of Goods Sold,1236647.24
+DE01,6000-OPEX,Operating Expenses,1808838.20
+GB01,1000-IC-REC,Intercompany Receivable,955789.17
+GB01,2000-IC-PAY,Intercompany Payable,-335830.99
+GB01,1100-CASH,Cash and Equivalents,1262359.98
+GB01,3000-EQ,Retained Earnings,1701119.66
+GB01,4000-REV,Revenue,448855.28
+GB01,5000-COGS,Cost of Goods Sold,1098404.49
+GB01,6000-OPEX,Operating Expenses,1263056.81
+IE01,1000-IC-REC,Intercompany Receivable,629003.59
+IE01,2000-IC-PAY,Intercompany Payable,-677319.95
+IE01,1100-CASH,Cash and Equivalents,1710037.23
+IE01,3000-EQ,Retained Earnings,995970.67
+IE01,4000-REV,Revenue,1387670.31
+IE01,5000-COGS,Cost of Goods Sold,-375742.79
+IE01,6000-OPEX,Operating Expenses,1051251.20
+BR01,1000-IC-REC,Intercompany Receivable,646270.28
+BR01,2000-IC-PAY,Intercompany Payable,-106154.23
+BR01,1100-CASH,Cash and Equivalents,591272.65
+BR01,3000-EQ,Retained Earnings,757321.07
+BR01,4000-REV,Revenue,214213.61
+BR01,5000-COGS,Cost of Goods Sold,761267.02
+BR01,6000-OPEX,Operating Expenses,366322.54
+MX01,1000-IC-REC,Intercompany Receivable,795609.37
+MX01,2000-IC-PAY,Intercompany Payable,-424392.98
+MX01,1100-CASH,Cash and Equivalents,-294076.06
+MX01,3000-EQ,Retained Earnings,1819169.50
+MX01,4000-REV,Revenue,481090.18
+MX01,5000-COGS,Cost of Goods Sold,-333824.61
+MX01,6000-OPEX,Operating Expenses,1325698.51
+ZA01,1000-IC-REC,Intercompany Receivable,304951.00
+ZA01,2000-IC-PAY,Intercompany Payable,-534639.76
+ZA01,1100-CASH,Cash and Equivalents,1222417.99
+ZA01,3000-EQ,Retained Earnings,1239316.29
+ZA01,4000-REV,Revenue,956105.32
+ZA01,5000-COGS,Cost of Goods Sold,1709670.97
+ZA01,6000-OPEX,Operating Expenses,-240281.78

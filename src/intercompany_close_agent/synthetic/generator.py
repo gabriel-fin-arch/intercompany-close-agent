@@ -4,8 +4,10 @@ Produces a trial balance and an intercompany ledger for a small fictional
 life-sciences group, then deliberately breaks a slice of the intercompany
 population the way a real close breaks: an FX conversion mismatch, a cutoff
 timing gap, a missing counterparty booking, a wrong counterparty code, a
-rounding difference, a flipped sign, and manual re-keying noise from the
-group's one non-interfaced entity.
+rounding difference, a flipped sign, an affiliate reporting in its own local
+currency instead of group USD, an entity mapped as its own counterparty, a
+reference reused by an unrelated transaction, and manual re-keying noise
+from the group's one non-interfaced entity.
 
 Everything here is invented. None of the entity names, amounts, or
 references correspond to any real company, and the numbers are randomly
@@ -181,6 +183,34 @@ def anomaly_local_currency(rows: list[dict], rng: random.Random) -> list[dict]:
     return rows
 
 
+def anomaly_self_dealing(rows: list[dict], rng: random.Random) -> list[dict]:
+    """The counterparty's booking mapped the balance to itself instead of the real entity.
+
+    A mapping error upstream, not a genuine intercompany balance: the legs
+    still net to zero, which is exactly why the matcher checks for this
+    explicitly rather than trusting a clean net.
+    """
+    rows[1]["counterparty_code"] = rows[1]["entity_code"]
+    return rows
+
+
+def anomaly_duplicate_reference(rows: list[dict], rng: random.Random) -> list[dict]:
+    """An unrelated transaction, from a different entity pair, reused this reference number."""
+    original_entities = {rows[0]["entity_code"], rows[0]["counterparty_code"]}
+    third_code = rng.choice([e.code for e in ENTITIES if e.code not in original_entities])
+    third_counterparty = rng.choice([e.code for e in ENTITIES if e.code != third_code])
+    extra_leg = {
+        "entity_code": third_code,
+        "counterparty_code": third_counterparty,
+        "reference": rows[0]["reference"],
+        "amount": rows[0]["amount"],
+        "currency": "USD",
+        "transaction_date": rows[0]["transaction_date"],
+        "description": f"Reference collision, unrelated to {rows[0]['entity_code']}->{rows[0]['counterparty_code']}",
+    }
+    return [*rows, extra_leg]
+
+
 ANOMALY_INJECTORS = {
     "fx_mismatch": anomaly_fx_mismatch,
     "timing": anomaly_timing,
@@ -190,13 +220,33 @@ ANOMALY_INJECTORS = {
     "sign_flip": anomaly_sign_flip,
     "non_interfaced_noise": anomaly_non_interfaced_noise,
     "local_currency": anomaly_local_currency,
+    "self_dealing": anomaly_self_dealing,
+    "duplicate_reference": anomaly_duplicate_reference,
 }
+
+# self_dealing and duplicate_reference are rare at anomaly_rate alone -- one
+# of ten injectors, picked ~35% of the time works out to under one expected
+# occurrence at the default pair_count. They're also the two exception types
+# docs/human-in-the-loop.md leans on hardest to make its case (an entity
+# can't be its own counterparty; a reference can't mean two things), so
+# leaving them to chance meant most runs of this generator never actually
+# demonstrated them. Forced onto one pair each instead of left to the same
+# per-pair roll as everything else.
+FORCED_ANOMALIES = ("self_dealing", "duplicate_reference")
 
 
 def build_ic_ledger_rows(pairs: list[ICPair], rng: random.Random, anomaly_rate: float = 0.35) -> list[dict]:
     rows: list[dict] = []
     anomaly_names = list(ANOMALY_INJECTORS)
-    for pair in pairs:
+
+    # Forced pairs are chosen from the ones ZA01 isn't part of, so the
+    # non-interfaced noise check below can't re-key the reference out from
+    # under a duplicate_reference anomaly that depends on it staying put.
+    forceable = [i for i, pair in enumerate(pairs) if "ZA01" not in (pair.entity_code, pair.counterparty_code)]
+    forced_indices = rng.sample(forceable, min(len(FORCED_ANOMALIES), len(forceable)))
+    forced = dict(zip(forced_indices, FORCED_ANOMALIES, strict=False))
+
+    for i, pair in enumerate(pairs):
         pair_rows = rows_from_pair(pair)
 
         # ZA01 is the group's one non-interfaced entity -- give it a standing
@@ -204,8 +254,10 @@ def build_ic_ledger_rows(pairs: list[ICPair], rng: random.Random, anomaly_rate: 
         if "ZA01" in (pair.entity_code, pair.counterparty_code) and rng.random() < 0.5:
             pair_rows = anomaly_non_interfaced_noise(pair_rows, rng)
 
-        if rng.random() < anomaly_rate:
+        injector_name = forced.get(i)
+        if injector_name is None and rng.random() < anomaly_rate:
             injector_name = rng.choice(anomaly_names)
+        if injector_name is not None:
             pair_rows = ANOMALY_INJECTORS[injector_name](pair_rows, rng)
 
         rows.extend(pair_rows)
@@ -264,7 +316,12 @@ def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
         writer.writerows(rows)
 
 
-def generate(seed: int = 42, pair_count: int = 26, out_dir: Path = OUTPUT_DIR) -> None:
+def generate(seed: int = 14, pair_count: int = 26, out_dir: Path = OUTPUT_DIR) -> None:
+    # 14 isn't special to the generator -- it's just the seed (out of the
+    # first 50 tried) whose random draw happens to exercise all eight
+    # exception types in one committed dataset, missing_counterparty through
+    # duplicate_reference, instead of leaving some of them to only ever show
+    # up in tests/test_matching.py's hand-built fixtures.
     rng = random.Random(seed)
 
     ic_pairs = generate_ic_pairs(rng, pair_count)
