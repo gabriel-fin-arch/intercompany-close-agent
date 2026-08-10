@@ -190,6 +190,30 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
             )
             continue
 
+        if leg_a.amount != 0 and leg_b.amount != 0 and (leg_a.amount > 0) == (leg_b.amount > 0):
+            # A clean pair always has one receivable and one payable leg. When
+            # both point the same way, at least one entity has the balance
+            # backwards -- and nothing in the ledger says which. This is a
+            # different problem from an amount that's merely off: netting two
+            # same-direction legs would produce an elimination in an
+            # arbitrary, possibly wrong, direction rather than a residual.
+            side = "receivable" if leg_a.amount > 0 else "payable"
+            exceptions.append(
+                ICException(
+                    reference=reference,
+                    exception_type=ExceptionType.SIGN_MISMATCH,
+                    legs=legs,
+                    net_amount=leg_a.amount + leg_b.amount,
+                    materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
+                    detected_reason=(
+                        f"{reference}: {leg_a.entity_code} and {leg_b.entity_code} both booked "
+                        f"this as a {side}; a real balance has one of each, and the ledger "
+                        f"doesn't say which side has the sign backwards."
+                    ),
+                )
+            )
+            continue
+
         net = leg_a.amount + leg_b.amount
         tolerance = amount_tolerance_for(max(abs(leg_a.amount), abs(leg_b.amount)))
         if abs(net) > tolerance:

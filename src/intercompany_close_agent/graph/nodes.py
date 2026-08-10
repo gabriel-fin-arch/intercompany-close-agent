@@ -17,9 +17,12 @@ from intercompany_close_agent.eliminations.engine import (
     build_elimination_from_exception,
     build_elimination_from_known_leg,
     build_eliminations,
+    elimination_residuals,
 )
 from intercompany_close_agent.graph.state import CloseState
 from intercompany_close_agent.matching.engine import match_transactions
+from intercompany_close_agent.models.elimination import Elimination
+from intercompany_close_agent.models.exception import ExceptionType, ICException
 from intercompany_close_agent.models.review import ReviewAction, ReviewDecision
 from intercompany_close_agent.reconciliation.tieout import out_of_tolerance, reconcile_to_trial_balance
 from intercompany_close_agent.triage.models import TriageClassification
@@ -127,6 +130,24 @@ def human_review(state: CloseState) -> dict:
     }
 
 
+def _residual_notes(ref: str, exc: ICException, elim: Elimination) -> list[str]:
+    """Audit-trail lines for any control-account residual this elimination leaves standing.
+
+    An elimination built from an exception (see
+    eliminations/engine.py::build_elimination_from_exception) can clear the
+    receivable side exactly and still leave the payable side short, or over,
+    of what that entity actually booked. That's worth a line in the audit
+    trail rather than a number that quietly stops tying out after the close
+    is done -- the same reasoning `reconcile` (above) already applies before
+    matching starts.
+    """
+    return [
+        f"{ref}: eliminated at {elim.lines[0].amount}, but {entity_code}'s control account "
+        f"carries an unexplained residual of {residual} after posting"
+        for entity_code, residual in elimination_residuals(exc, elim)
+    ]
+
+
 def finalize(state: CloseState) -> dict:
     """Build the final elimination set: clean pairs, auto-resolved exceptions,
     and anything a human approved -- in that order, skipping whatever was
@@ -143,7 +164,9 @@ def finalize(state: CloseState) -> dict:
         triage_result = triage_by_reference[ref]
 
         if triage_result.classification == TriageClassification.AUTO_RESOLVABLE:
-            eliminations.append(build_elimination_from_exception(exc, note="auto-resolved by triage"))
+            elim = build_elimination_from_exception(exc, note="auto-resolved by triage")
+            eliminations.append(elim)
+            notes.extend(_residual_notes(ref, exc, elim))
             continue
 
         decision = decisions_by_reference.get(ref)
@@ -154,10 +177,21 @@ def finalize(state: CloseState) -> dict:
         if decision.reviewer_note:
             note = f"{note}: {decision.reviewer_note}"
 
-        if len(exc.legs) == 2:
-            eliminations.append(
-                build_elimination_from_exception(exc, note=note, override_amount=decision.override_amount)
+        if exc.exception_type == ExceptionType.SIGN_MISMATCH:
+            # Both legs are booked on the same side, so there's no
+            # unambiguous receivable/payable pair to derive an entry from --
+            # approving this isn't enough, unlike an amount mismatch or a
+            # timing gap. build_elimination_from_exception would have to
+            # guess which entity has the sign backwards, and it refuses to.
+            notes.append(
+                f"{ref}: approved but not booked automatically -- both legs share a sign, "
+                f"so which side has it backwards isn't knowable from the ledger; needs manual "
+                f"resolution"
             )
+        elif len(exc.legs) == 2:
+            elim = build_elimination_from_exception(exc, note=note, override_amount=decision.override_amount)
+            eliminations.append(elim)
+            notes.extend(_residual_notes(ref, exc, elim))
         elif len(exc.legs) == 1 and decision.override_amount is not None:
             # MISSING_COUNTERPARTY: there's no second system leg to derive an
             # amount from, so an approval only produces an elimination when

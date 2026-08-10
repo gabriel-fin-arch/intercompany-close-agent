@@ -31,6 +31,11 @@ ALWAYS_NEEDS_JUDGMENT = {
     # and FX translation is out of scope here -- so there is nothing to
     # auto-resolve, only someone to tell.
     ExceptionType.CURRENCY_MISMATCH,
+    # Both legs point the same way (both receivable or both payable), so at
+    # least one entity has the sign backwards -- and the ledger doesn't say
+    # which. Netting them would eliminate in an arbitrary, possibly wrong,
+    # direction, not just an imprecise one.
+    ExceptionType.SIGN_MISMATCH,
 }
 
 # Confidence bands for the deterministic path. These are fixed labels, not

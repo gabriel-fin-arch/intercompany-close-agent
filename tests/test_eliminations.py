@@ -138,6 +138,13 @@ def test_build_elimination_from_exception_uses_the_raw_amount_by_default():
     credits = sum(line.amount for line in elim.lines if line.line_type == JournalLineType.CREDIT)
     assert debits == credits == Decimal("1000.00")  # the receivable leg's amount, not the residual
 
+    # DE01 only ever booked -950.00, so this entry debits its IC_PAYABLE for
+    # 1000.00 -- 50.00 more than DE01 actually owed. That's not free: DE01's
+    # control account flips to a 50.00 receivable instead of landing at
+    # zero, and the narrative has to say so rather than letting the gap
+    # disappear. Negative means over-cleared; see elimination_residuals.
+    assert "DE01 carries an unexplained residual of -50.00 after posting" in elim.narrative
+
 
 def test_build_elimination_from_exception_honors_override_amount():
     exc = ICException(
@@ -153,6 +160,40 @@ def test_build_elimination_from_exception_honors_override_amount():
     assert debits == Decimal("800.00")
 
 
+def test_elimination_from_exception_leaves_no_residual_note_when_it_fully_clears():
+    """The common case -- both legs booked the same amount -- shouldn't get
+    a residual note just because one exists to check for."""
+    exc = ICException(
+        reference="REF-CLEAN",
+        exception_type=ExceptionType.TIMING_GAP,
+        legs=[_leg("US01", "DE01", "REF-CLEAN", "1000.00"), _leg("DE01", "US01", "REF-CLEAN", "-1000.00")],
+        net_amount=Decimal("0.00"),
+        materiality=Materiality.LOW,
+        detected_reason="test fixture",
+    )
+    elim = build_elimination_from_exception(exc)
+    assert "residual" not in elim.narrative
+
+
+def test_elimination_residuals_reports_per_entity_gap():
+    from intercompany_close_agent.eliminations.engine import elimination_residuals
+
+    exc = ICException(
+        reference="REF-RES",
+        exception_type=ExceptionType.AMOUNT_MISMATCH,
+        legs=[_leg("DE01", "ZA01", "REF-RES", "181350.76"), _leg("ZA01", "DE01", "REF-RES", "-182493.27")],
+        net_amount=Decimal("-1142.51"),
+        materiality=Materiality.HIGH,
+        detected_reason="test fixture",
+    )
+    elim = build_elimination_from_exception(exc)
+
+    residuals = dict(elimination_residuals(exc, elim))
+    assert residuals == {"ZA01": Decimal("1142.51")}
+    # DE01 (the receivable leg) is always cleared exactly when there's no override
+    assert "DE01" not in residuals
+
+
 def test_build_elimination_from_exception_rejects_wrong_leg_count():
     exc = ICException(
         reference="REF-7",
@@ -163,6 +204,22 @@ def test_build_elimination_from_exception_rejects_wrong_leg_count():
         detected_reason="test fixture",
     )
     with pytest.raises(ValueError, match="cannot build an elimination"):
+        build_elimination_from_exception(exc)
+
+
+def test_build_elimination_refuses_to_guess_direction_for_same_signed_legs():
+    """A sign-flip pair (both receivable, or both payable) has no honest
+    receivable/payable split -- this must raise, not silently invert one
+    side of the entry."""
+    exc = ICException(
+        reference="REF-SIGN",
+        exception_type=ExceptionType.SIGN_MISMATCH,
+        legs=[_leg("US01", "DE01", "REF-SIGN", "1000.00"), _leg("DE01", "US01", "REF-SIGN", "1000.00")],
+        net_amount=Decimal("2000.00"),
+        materiality=Materiality.LOW,
+        detected_reason="test fixture",
+    )
+    with pytest.raises(ValueError, match="cannot tell receivable from payable"):
         build_elimination_from_exception(exc)
 
 
