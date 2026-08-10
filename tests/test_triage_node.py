@@ -12,16 +12,16 @@ from intercompany_close_agent.triage import node as triage_node
 from intercompany_close_agent.triage.models import TriageClassification, TriageResult
 
 
-def _exc() -> ICException:
+def _exc(reference: str = "REF-1") -> ICException:
     leg = ICTransaction(
         entity_code="US01",
         counterparty_code="DE01",
-        reference="REF-1",
+        reference=reference,
         amount=Decimal("100.00"),
         transaction_date=date(2025, 9, 30),
     )
     return ICException(
-        reference="REF-1",
+        reference=reference,
         exception_type=ExceptionType.AMOUNT_MISMATCH,
         legs=[leg],
         net_amount=Decimal("10.00"),
@@ -74,9 +74,12 @@ def test_falls_back_to_rules_when_llm_call_fails(monkeypatch):
 
 
 def test_triage_all_preserves_order():
-    exceptions = [_exc(), _exc()]
+    """Distinct references, checked back in the same sequence they went in --
+    not just a count, which would pass even if the results came back
+    shuffled or reversed."""
+    exceptions = [_exc("REF-A"), _exc("REF-B"), _exc("REF-C")]
     results = triage_node.triage_all(exceptions)
-    assert len(results) == 2
+    assert [r.reference for r in results] == ["REF-A", "REF-B", "REF-C"]
 
 
 # --- the taxonomy is enforced in code, not just asked for in the prompt ----
