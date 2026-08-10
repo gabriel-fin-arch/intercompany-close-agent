@@ -44,7 +44,8 @@ class ICException(BaseModel):
                                     # | self_dealing | currency_mismatch | sign_mismatch
                                     # | amount_mismatch | timing_gap | duplicate_reference
     legs: list[ICTransaction]
-    net_amount: Decimal
+    net_amount: Decimal | None      # None for currency_mismatch -- nothing to sum
+                                    # across currencies without an FX rate
     materiality: Materiality        # low | high: pure magnitude, not a judgment call
     detected_reason: str            # plain-language, code-generated
 ```

@@ -47,7 +47,14 @@ class ICException(BaseModel):
     reference: str
     exception_type: ExceptionType
     legs: list[ICTransaction] = Field(description="Every transaction leg found under this reference.")
-    net_amount: Decimal = Field(description="Sum of the legs' amounts -- the residual that isn't explained.")
+    net_amount: Decimal | None = Field(
+        description=(
+            "Sum of the legs' amounts -- the residual that isn't explained. "
+            "None for CURRENCY_MISMATCH: legs booked in different currencies "
+            "can't be summed without an FX rate, so there is no net to report, "
+            "not a net that happens to be zero."
+        )
+    )
     materiality: Materiality
     detected_reason: str = Field(description="Plain-language, code-generated explanation of what the matcher found.")
 
