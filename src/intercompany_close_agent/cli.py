@@ -87,7 +87,8 @@ def run(
         typer.echo(f"=== Reviewer worklist ({len(pending)} item(s) need a human decision) ===")
         for item in pending:
             typer.echo(f"  [{item['materiality'].upper()}] {item['reference']} -- {item['exception_type']}")
-            typer.echo(f"      net amount: {item['net_amount']}")
+            net_amount = item["net_amount"] or "n/a -- different currencies, no FX rate to net"
+            typer.echo(f"      net amount: {net_amount}")
             typer.echo(f"      why: {item['detected_reason']}")
             typer.echo(f"      triage (confidence {item['confidence']:.2f}): {item['rationale']}")
         typer.echo("")
