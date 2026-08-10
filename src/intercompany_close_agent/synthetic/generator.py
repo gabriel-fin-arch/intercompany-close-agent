@@ -29,7 +29,13 @@ from pathlib import Path
 
 from intercompany_close_agent.models.entity import Entity
 
-OUTPUT_DIR = Path(__file__).resolve().parents[3] / "data" / "synthetic"
+# Resolved relative to the current working directory, not this file's
+# location. Every documented way of running this project (`uv run ...`) is
+# invoked from the repo root, so cwd already gives the right answer there --
+# and unlike walking a fixed number of parents up from __file__, it doesn't
+# assume a src/-layout checkout that wouldn't exist if this package were
+# ever installed non-editable (e.g. from a built wheel).
+OUTPUT_DIR = Path.cwd() / "data" / "synthetic"
 
 ENTITIES: list[Entity] = [
     Entity(code="US01", name="Vireon Biosciences US Inc", region="US", local_currency="USD", interfaced=True),
