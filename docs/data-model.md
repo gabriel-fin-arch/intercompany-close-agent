@@ -41,7 +41,7 @@ coming next.
 class ICException(BaseModel):
     reference: str
     exception_type: ExceptionType   # missing_counterparty | counterparty_mismatch
-                                    # | self_dealing | currency_mismatch
+                                    # | self_dealing | currency_mismatch | sign_mismatch
                                     # | amount_mismatch | timing_gap | duplicate_reference
     legs: list[ICTransaction]
     net_amount: Decimal
