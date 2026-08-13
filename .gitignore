@@ -16,8 +16,13 @@ venv/
 
 # test / cache
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
+
+# local tooling / notes (never part of the project itself)
+.claude/
+chat_history_*.md
 
 # streamlit
 .streamlit/secrets.toml
