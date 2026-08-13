@@ -49,7 +49,7 @@ def _enforce_taxonomy(
 
     Three things gate auto-resolution, and none of them are optional just
     because a live model call said otherwise: the exception type isn't one
-    of the five that are never auto-resolved, the residual is immaterial,
+    of the six that are never auto-resolved, the residual is immaterial,
     and no entity on either side of the balance is manually loaded. All
     three are also stated in the system prompt in `triage/llm.py` -- but a
     prompt is a request, not a guarantee. Free text from the ledger (an
