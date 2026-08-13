@@ -170,13 +170,21 @@ def anomaly_sign_flip(rows: list[dict], rng: random.Random) -> list[dict]:
 
 
 def anomaly_non_interfaced_noise(rows: list[dict], rng: random.Random) -> list[dict]:
-    """A reference re-keyed with a hyphen dropped to an underscore.
+    """A manual-load entity re-keyed the reference and dropped a hyphen.
 
-    The kind of typo that breaks the match on both legs. A manual-load
-    entity is especially prone to it -- which is why ZA01 draws it at an
-    elevated rate in build_ic_ledger_rows -- but a slip like this isn't
-    exclusive to hand-keyed books, so it also sits in the general pool.
+    This is the one anomaly whose story is specific to *who* booked the leg:
+    only an entity that keys its data in by hand re-types a reference and
+    slips. So it no-ops on a balance between two interfaced entities -- same
+    guard idiom as anomaly_local_currency skipping a USD entity -- which
+    keeps it from firing on a pair whose story it doesn't fit when it comes
+    up in the general pool. On the shipped dataset that ties the re-keying to
+    ZA01, the group's one non-interfaced entity, exactly as the data README
+    describes it.
     """
+    by_code = {e.code: e for e in ENTITIES}
+    involved = (rows[0]["entity_code"], rows[0]["counterparty_code"])
+    if not any(code in by_code and not by_code[code].interfaced for code in involved):
+        return rows
     rows[1]["reference"] = rows[1]["reference"].replace("-", "_", 1)
     return rows
 
