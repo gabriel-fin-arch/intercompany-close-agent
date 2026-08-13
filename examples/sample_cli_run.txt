@@ -5,14 +5,14 @@ Loaded 7 entities, 53 IC transaction legs
   - ingested 53 IC transaction legs
   - control account tie-out: 1 of 7 entities do not tie
   -   US01: subledger -48894.96 vs TB -46358.95 (variance -2536.01)
-  - matched 9 clean pairs, 22 exceptions
-  - triaged 22 exceptions
+  - matched 11 clean pairs, 18 exceptions
+  - triaged 18 exceptions
 
 === Control account tie-out: 1 entity(ies) do not tie ===
   US01: IC subledger -48894.96 vs trial balance -46358.95 (variance -2536.01)
   These are GL-vs-subledger data breaks, not per-balance reconciliation items.
 
-=== Reviewer worklist (20 item(s) need a human decision) ===
+=== Reviewer worklist (16 item(s) need a human decision) ===
   [HIGH] RECHARGE-2025-1000 -- counterparty_mismatch
       net amount: 0.00
       why: US01 booked RECHARGE-2025-1000 against BR01, but BR01 booked it against IE01 instead of US01.
@@ -53,14 +53,6 @@ Loaded 7 entities, 53 IC transaction legs
       net amount: -94676.80
       why: ZA01 booked ROYALTY_2025-1014 against US01, but no mirror leg was found under this reference.
       triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: ZA01 booked ROYALTY_2025-1014 against US01, but no mirror leg was found under this reference. Worth checking the manual load first -- ZA01 keys its data in by hand.
-  [HIGH] LOAN-INT-2025-1016 -- missing_counterparty
-      net amount: 161708.04
-      why: BR01 booked LOAN-INT-2025-1016 against US01, but no mirror leg was found under this reference.
-      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: BR01 booked LOAN-INT-2025-1016 against US01, but no mirror leg was found under this reference.
-  [HIGH] LOAN_INT-2025-1016 -- missing_counterparty
-      net amount: -161708.04
-      why: US01 booked LOAN_INT-2025-1016 against BR01, but no mirror leg was found under this reference.
-      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: US01 booked LOAN_INT-2025-1016 against BR01, but no mirror leg was found under this reference.
   [HIGH] LOAN-INT-2025-1017 -- duplicate_reference
       net amount: 104359.22
       why: 3 legs share reference LOAN-INT-2025-1017; expected exactly 2.
@@ -81,14 +73,6 @@ Loaded 7 entities, 53 IC transaction legs
       net amount: -22796.51
       why: BR01 booked LOAN_INT-2025-1020 against ZA01, but no mirror leg was found under this reference.
       triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: BR01 booked LOAN_INT-2025-1020 against ZA01, but no mirror leg was found under this reference. Worth checking the manual load first -- ZA01 keys its data in by hand.
-  [HIGH] ROYALTY-2025-1021 -- missing_counterparty
-      net amount: 192245.85
-      why: DE01 booked ROYALTY-2025-1021 against IE01, but no mirror leg was found under this reference.
-      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: DE01 booked ROYALTY-2025-1021 against IE01, but no mirror leg was found under this reference.
-  [HIGH] ROYALTY_2025-1021 -- missing_counterparty
-      net amount: -192245.85
-      why: IE01 booked ROYALTY_2025-1021 against DE01, but no mirror leg was found under this reference.
-      triage (confidence 0.95): missing counterparty exceptions are never auto-resolved by the rule fallback: IE01 booked ROYALTY_2025-1021 against DE01, but no mirror leg was found under this reference.
   [HIGH] LOAN-INT-2025-1022 -- timing_gap
       net amount: 0.00
       why: LOAN-INT-2025-1022: US01 booked in 2025-09 but MX01 booked in 2025-10; the balance straddles the close cutoff.

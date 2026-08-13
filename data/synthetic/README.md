@@ -15,8 +15,10 @@ EPM, or similar) fed by a source ERP:
   `interfaced = false`. In a real close, most entities load their trial
   balance automatically from the source ERP; a handful don't, and get
   keyed in manually instead. Manual loads are exactly where reference typos
-  and re-keying slips creep in, so `ZA01` gets an elevated chance of that
-  kind of noise in the generator (see `anomaly_non_interfaced_noise`).
+  and re-keying slips creep in, so that kind of noise is confined to the
+  balances `ZA01` is on -- an interfaced entity loads straight from the ERP
+  and never re-keys a reference (see `anomaly_non_interfaced_noise`, which
+  no-ops on a balance between two interfaced entities).
 
 - **`trial_balance.csv`** -- one row per entity per GL account, using local
   (pre-mapping) account codes. The loader in `ingest/loaders.py` maps these
