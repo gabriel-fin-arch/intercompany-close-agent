@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from intercompany_close_agent.graph.graph import resume_close, run_close
 from intercompany_close_agent.ingest.loaders import load_ic_transactions, load_trial_balance
 from intercompany_close_agent.models.entity import Entity
-from intercompany_close_agent.models.review import ReviewAction
+from intercompany_close_agent.models.review import ReviewAction, parse_override_amount
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 
 load_dotenv()
@@ -150,9 +150,26 @@ elif "__interrupt__" in result:
             }
 
     if st.button("Submit decisions", type="primary"):
-        final_result = resume_close(st.session_state["graph"], st.session_state["config"], list(decisions.values()))
-        st.session_state["final"] = final_result
-        st.rerun()
+        # Validate the free-text amounts before resuming: an unparseable one
+        # would otherwise crash resume_close deep in pydantic, losing the
+        # whole worklist. Report each bad field and let the reviewer fix it.
+        payload: list[dict] = []
+        errors: list[str] = []
+        for ref, decision in decisions.items():
+            try:
+                amount = parse_override_amount(decision["override_amount"])
+            except ValueError as exc:
+                errors.append(f"{ref}: {exc}")
+                continue
+            payload.append({**decision, "override_amount": amount})
+
+        if errors:
+            for message in errors:
+                st.error(message)
+        else:
+            final_result = resume_close(st.session_state["graph"], st.session_state["config"], payload)
+            st.session_state["final"] = final_result
+            st.rerun()
 
 else:
     st.success("No exceptions needed human review -- close finalized automatically.")
