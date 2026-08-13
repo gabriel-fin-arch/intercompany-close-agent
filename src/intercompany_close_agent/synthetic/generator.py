@@ -170,7 +170,13 @@ def anomaly_sign_flip(rows: list[dict], rng: random.Random) -> list[dict]:
 
 
 def anomaly_non_interfaced_noise(rows: list[dict], rng: random.Random) -> list[dict]:
-    """A manual-load entity re-keyed the reference and dropped a hyphen."""
+    """A reference re-keyed with a hyphen dropped to an underscore.
+
+    The kind of typo that breaks the match on both legs. A manual-load
+    entity is especially prone to it -- which is why ZA01 draws it at an
+    elevated rate in build_ic_ledger_rows -- but a slip like this isn't
+    exclusive to hand-keyed books, so it also sits in the general pool.
+    """
     rows[1]["reference"] = rows[1]["reference"].replace("-", "_", 1)
     return rows
 
