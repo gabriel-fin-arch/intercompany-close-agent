@@ -130,6 +130,45 @@ def test_approving_a_missing_counterparty_with_an_amount_books_it(monkeypatch):
     assert "confirmed with the affiliate" in elimination.narrative
 
 
+def test_approving_with_a_non_positive_override_is_not_booked(monkeypatch):
+    """The reviewer's amount is free text from the dashboard. A negative would
+    book a direction-inverted entry and a zero would clear nothing, so a
+    fat-fingered amount must degrade to an unbooked worklist item with a
+    reason in the audit trail -- not crash the resume, and not book garbage."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-neg-override")
+
+    one_legged = {exc.reference for exc in result["exceptions"] if len(exc.legs) == 1}
+    assert one_legged, "the synthetic dataset should contain at least one missing counterparty"
+    target = sorted(one_legged)[0]
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    decisions = []
+    for item in pending:
+        if item["reference"] == target:
+            decisions.append(
+                {
+                    "reference": target,
+                    "action": ReviewAction.EDIT.value,
+                    "reviewer_note": "fat-fingered a negative",
+                    "override_amount": "-5000.00",
+                }
+            )
+        else:
+            decisions.append({"reference": item["reference"], "action": ReviewAction.REJECT.value})
+
+    final = resume_close(graph, config, decisions)
+
+    booked = {e.reference for e in final["eliminations"]}
+    assert target not in booked
+    assert any(
+        target in entry and "must be a positive number" in entry for entry in final["audit_trail"]
+    )
+
+
 def test_approving_a_missing_counterparty_without_an_amount_is_not_booked(monkeypatch):
     """Approval alone isn't enough when there's no amount to book."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)

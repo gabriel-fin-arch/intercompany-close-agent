@@ -124,6 +124,44 @@ def test_elimination_model_rejects_unbalanced_lines():
         )
 
 
+def test_journal_line_rejects_a_non_positive_amount():
+    """The debit/credit side is carried by line_type, so the amount is always
+    positive -- a negative or zero would either invert the direction or book
+    nothing. The Field documents this; enforce it so it can't be violated."""
+    for bad in (Decimal("-100.00"), Decimal("0")):
+        with pytest.raises(ValueError, match="greater than 0"):
+            JournalLine(
+                entity_code="US01",
+                account_code="9999-IC-ELIM",
+                line_type=JournalLineType.DEBIT,
+                amount=bad,
+            )
+
+
+def test_build_elimination_from_exception_refuses_a_non_positive_override():
+    """A reviewer's override is the one human-supplied number that reaches a
+    JE. A negative one would post a direction-inverted 'balanced' entry; a
+    zero would clear nothing. The model backstop must refuse both."""
+    exc = ICException(
+        reference="REF-NEG",
+        exception_type=ExceptionType.AMOUNT_MISMATCH,
+        legs=[_leg("US01", "DE01", "REF-NEG", "1000.00"), _leg("DE01", "US01", "REF-NEG", "-950.00")],
+        net_amount=Decimal("50.00"),
+        materiality=Materiality.LOW,
+        detected_reason="test fixture",
+    )
+    for bad in (Decimal("-500.00"), Decimal("0")):
+        with pytest.raises(ValueError, match="greater than 0"):
+            build_elimination_from_exception(exc, override_amount=bad)
+
+
+def test_build_elimination_from_known_leg_refuses_a_non_positive_amount():
+    known = _leg("US01", "DE01", "REF-MC", "5000.00")
+    for bad in (Decimal("-5000.00"), Decimal("0")):
+        with pytest.raises(ValueError, match="greater than 0"):
+            build_elimination_from_known_leg(known, bad)
+
+
 def test_build_elimination_from_exception_uses_the_raw_amount_by_default():
     exc = ICException(
         reference="REF-5",
