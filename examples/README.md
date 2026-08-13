@@ -26,12 +26,15 @@ and triage surfaces it because a manually loaded balance is a weaker
 starting point than one that arrived through a system interface.
 
 Note that a few `missing_counterparty` pairs show up twice, from both
-sides (e.g. `LOAN-INT-2025-1016` and `LOAN_INT-2025-1016`) -- that's the
-`non_interfaced_noise` anomaly from the synthetic data generator doing
-exactly what it's meant to: a manually re-keyed reference (dropped hyphen)
-makes what should be one balance look like two separate missing-counterparty
-exceptions. The matching engine doesn't fuzzy-match references back
-together on purpose -- see `docs/human-in-the-loop.md` for why.
+sides (e.g. `LOAN-INT-2025-1020` and `LOAN_INT-2025-1020`, both involving
+`ZA01`) -- that's the `non_interfaced_noise` anomaly from the synthetic data
+generator doing exactly what it's meant to: `ZA01`, the group's one
+hand-keyed entity, re-typed the reference and dropped a hyphen, so what
+should be one balance looks like two separate missing-counterparty
+exceptions. That noise only ever attaches to a balance `ZA01` is on --
+interfaced entities load straight from the ERP and don't re-key anything.
+The matching engine doesn't fuzzy-match references back together on purpose
+-- see `docs/human-in-the-loop.md` for why.
 
 ## Dashboard
 
