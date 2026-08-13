@@ -24,7 +24,10 @@ class JournalLine(BaseModel):
     entity_code: str
     account_code: str
     line_type: JournalLineType
-    amount: Decimal = Field(description="Always positive; the debit/credit side is carried by line_type.")
+    amount: Decimal = Field(
+        gt=0,
+        description="Always positive; the debit/credit side is carried by line_type.",
+    )
 
 
 class Elimination(BaseModel):
