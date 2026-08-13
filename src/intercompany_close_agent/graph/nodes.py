@@ -177,6 +177,21 @@ def finalize(state: CloseState) -> dict:
         if decision is None or decision.action == ReviewAction.REJECT:
             continue  # still pending, or the reviewer decided not to book it
 
+        if decision.override_amount is not None and decision.override_amount <= 0:
+            # The reviewer's amount is the one human-supplied number that
+            # reaches a journal entry, and it's free text from the dashboard.
+            # A negative would post a direction-inverted "balanced" entry
+            # (a -500 debit is really a 500 credit); a zero would book an
+            # elimination that clears nothing. JournalLine forbids both at
+            # the model level -- caught here first so a fat-fingered amount
+            # degrades to an unbooked worklist item with a reason, instead
+            # of crashing the resume the reviewer depends on.
+            notes.append(
+                f"{ref}: approved with an override amount of {decision.override_amount}, but an "
+                f"elimination amount must be a positive number; not booked, needs a corrected amount"
+            )
+            continue
+
         note = f"human-approved ({decision.action.value})"
         if decision.reviewer_note:
             note = f"{note}: {decision.reviewer_note}"
