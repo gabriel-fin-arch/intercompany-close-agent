@@ -32,3 +32,4 @@ chat_history_*.md
 .idea/
 .DS_Store
 Thumbs.db
+uv.lock
