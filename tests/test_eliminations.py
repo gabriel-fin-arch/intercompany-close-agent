@@ -226,7 +226,7 @@ def test_elimination_residuals_reports_per_entity_gap():
     )
     elim = build_elimination_from_exception(exc)
 
-    residuals = dict(elimination_residuals(exc, elim))
+    residuals = dict(elimination_residuals(exc.legs, elim))
     assert residuals == {"ZA01": Decimal("1142.51")}
     # DE01 (the receivable leg) is always cleared exactly when there's no override
     assert "DE01" not in residuals
