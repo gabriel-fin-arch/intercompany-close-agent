@@ -13,7 +13,6 @@ reviewer worklist -- it never silently books something a human should see.
 
 from __future__ import annotations
 
-import csv
 import os
 from pathlib import Path
 
@@ -21,17 +20,11 @@ import typer
 from dotenv import load_dotenv
 
 from intercompany_close_agent.graph.graph import run_close
-from intercompany_close_agent.ingest.loaders import load_ic_transactions, load_trial_balance
-from intercompany_close_agent.models.entity import Entity
+from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 from intercompany_close_agent.synthetic.generator import generate as generate_dataset
 
 app = typer.Typer(help="Intercompany close agent -- IC matching, eliminations, and human-in-the-loop triage.")
-
-
-def _load_entities(path: Path) -> list[Entity]:
-    with path.open(encoding="utf-8") as fh:
-        return [Entity(**row) for row in csv.DictReader(fh)]
 
 
 @app.command("generate-data")
@@ -53,9 +46,11 @@ def run(
     """Run the close pipeline end to end and print the results."""
     load_dotenv()
 
-    entities = _load_entities(data_dir / "entities.csv")
-    trial_balance = load_trial_balance(data_dir / "trial_balance.csv")
-    transactions = load_ic_transactions(data_dir / "ic_ledger.csv")
+    try:
+        entities, trial_balance, transactions = load_dataset(data_dir)
+    except DataLoadError as exc:
+        typer.echo(f"Cannot run the close: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
     model_name = os.environ.get("ANTHROPIC_MODEL")
     llm_configured = bool(os.environ.get("ANTHROPIC_API_KEY")) and bool(model_name)

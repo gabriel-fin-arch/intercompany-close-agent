@@ -30,9 +30,9 @@ class Entity(BaseModel):
             "Whether the entity's trial balance loads automatically from the source ERP. "
             "Non-interfaced entities are loaded manually, which is exactly why they carry "
             "more risk of timing and mapping errors. Triage reads this: an exception "
-            "involving a manually loaded entity gets a confidence penalty, and one that "
-            "would otherwise have been auto-resolved is escalated instead "
-            "(see triage/rules.py)."
+            "involving a manually loaded entity is never auto-eliminated on the strength of "
+            "being small, so one that would otherwise have been auto-resolved goes to a "
+            "reviewer instead (see triage/rules.py)."
         ),
     )
 
