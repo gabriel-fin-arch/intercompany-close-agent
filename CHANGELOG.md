@@ -14,6 +14,14 @@ All notable changes to this project are logged here.
 - `generate-data` wrote CRLF, so following the README left the three committed
   CSVs showing as modified in a clean clone. Rows end in LF now, and a test
   regenerates the sample and compares it byte for byte.
+- An empty IC ledger ran to completion and printed "No items needed human
+  review", which is what a clean month looks like. It is refused now, as is an
+  entity code that `entities.csv` doesn't know (triage would otherwise treat it
+  as interfaced). Missing files, missing columns and unparseable rows name the
+  file and line instead of surfacing as a traceback, in the CLI and the
+  dashboard alike.
+- `Entity.interfaced` still described the confidence penalty that the
+  never-auto-eliminate policy replaced.
 
 ## [0.1.0] - 2026-01-09
 
