@@ -21,8 +21,9 @@ dollar amount:
 
 Everything else can be auto-resolved: an amount that's off by more than
 tolerance, or a balance whose two legs fell into different accounting
-periods. But only when the residual is below the group's materiality
-threshold. A $12 rounding difference on a $2M intercompany loan doesn't
+periods. But only when the amount at stake is below the group's
+materiality threshold: the residual for an amount mismatch, and the whole
+balance for a timing gap, whose legs agree but sit in different periods. A $12 rounding difference on a $2M intercompany loan doesn't
 need a human. A $400,000 amount mismatch does, even though it's "just" an
 `amount_mismatch` and not a control-flagged type.
 

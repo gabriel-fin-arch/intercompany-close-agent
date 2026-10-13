@@ -119,3 +119,19 @@ def test_counterparty_side_counts_even_without_a_booked_leg():
     exc = _exc(ExceptionType.AMOUNT_MISMATCH, Materiality.HIGH)
     # DE01 only ever appears as the counterparty on the first leg
     assert "DE01" in exc.involved_entity_codes
+
+
+def test_a_timing_gap_is_not_described_as_a_residual():
+    """Its legs agree, so the net amount a reviewer sees next to it is 0.00. The
+    band was measured on the balance straddling the cutoff, and the rationale
+    has to say so rather than call a zero material."""
+    result = triage_exception(_exc(ExceptionType.TIMING_GAP, Materiality.HIGH))
+
+    assert "residual" not in result.rationale.lower()
+    assert "The balance straddling the cutoff is material" in result.rationale
+
+
+def test_an_amount_mismatch_is_still_about_its_residual():
+    result = triage_exception(_exc(ExceptionType.AMOUNT_MISMATCH, Materiality.HIGH))
+
+    assert "The residual is material" in result.rationale

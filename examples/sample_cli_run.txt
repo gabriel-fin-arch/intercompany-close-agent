@@ -76,7 +76,7 @@ Loaded 7 entities, 53 IC transaction legs
   [HIGH] LOAN-INT-2025-1022 -- timing_gap
       net amount: 0.00
       why: LOAN-INT-2025-1022: US01 booked in 2025-09 but MX01 booked in 2025-10; the balance straddles the close cutoff.
-      triage (confidence 0.80): LOAN-INT-2025-1022: US01 booked in 2025-09 but MX01 booked in 2025-10; the balance straddles the close cutoff. Residual is material, so this needs sign-off before eliminating.
+      triage (confidence 0.80): LOAN-INT-2025-1022: US01 booked in 2025-09 but MX01 booked in 2025-10; the balance straddles the close cutoff. The balance straddling the cutoff is material, so this needs sign-off before eliminating.
 
 Run the reviewer dashboard to approve, reject or edit these:
   uv run streamlit run app/streamlit_app.py

@@ -38,6 +38,20 @@ ALWAYS_NEEDS_JUDGMENT = {
     ExceptionType.SIGN_MISMATCH,
 }
 
+def amount_at_stake(exc: ICException) -> str:
+    """What the materiality band was measured on, in words a reviewer can check.
+
+    For an amount mismatch that's the residual. A timing gap has none -- its
+    legs agree to the cent -- and what's at stake is the whole balance, since
+    one side of it sits in a different period from the other. The matcher
+    bands it on the larger leg for that reason, so calling it a residual here
+    would describe a number the reviewer can see is zero.
+    """
+    if exc.exception_type == ExceptionType.TIMING_GAP:
+        return "the balance straddling the cutoff"
+    return "the residual"
+
+
 # Confidence bands for the deterministic path. These are fixed labels, not
 # probabilities -- a rule engine has no distribution to draw one from, and
 # dressing a policy decision up as 0.83 would be false precision. They exist
@@ -106,7 +120,8 @@ def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None
             classification=TriageClassification.AUTO_RESOLVABLE,
             confidence=CONFIDENCE_IMMATERIAL,
             rationale=(
-                f"{exc.detected_reason} Residual is below the group materiality threshold and "
+                f"{exc.detected_reason} {amount_at_stake(exc).capitalize()} is below the group "
+                f"materiality threshold and "
                 f"both sides load through a system interface, so it's proposed for "
                 f"auto-elimination rather than escalation."
             ),
@@ -117,6 +132,7 @@ def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None
         classification=TriageClassification.NEEDS_HUMAN_JUDGMENT,
         confidence=CONFIDENCE_MATERIAL,
         rationale=(
-            f"{exc.detected_reason} Residual is material, so this needs sign-off before eliminating."
+            f"{exc.detected_reason} {amount_at_stake(exc).capitalize()} is material, so this needs "
+            f"sign-off before eliminating."
         ),
     )
