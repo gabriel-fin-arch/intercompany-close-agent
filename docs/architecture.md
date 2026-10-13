@@ -76,7 +76,8 @@ operationally useless.
 **Materiality means different things per exception type, deliberately.** For
 an amount mismatch or a duplicate reference it bands the *net of the legs
 sharing that reference*; for a missing counterparty, a counterparty
-mismatch, self-dealing, a currency mismatch, or a timing gap it bands the
+mismatch, self-dealing, a currency mismatch, a sign mismatch, or a timing
+gap it bands the
 *balance at risk* (the larger leg), because in those cases the residual
 isn't the interesting number: the whole balance is what's in question.
 
