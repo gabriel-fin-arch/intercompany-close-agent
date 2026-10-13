@@ -29,6 +29,11 @@ All notable changes to this project are logged here.
   confidence" on manually loaded entities where the policy is never to
   auto-eliminate them. The code already enforced both; the prompt and the docs
   that quote it now agree with it.
+- A clean pair only has to net to within tolerance, and its elimination left the
+  difference in the payable entity's control account without a word
+  (`MGMT-FEE-2025-1006` keeps -0.02 in US01). `finalize` records it the way it
+  already did for exceptions. The engine docstring still called the tolerance
+  "sub-dollar", which stopped being true when it became relative.
 
 ## [0.1.0] - 2026-01-09
 
