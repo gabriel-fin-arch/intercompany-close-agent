@@ -22,6 +22,13 @@ All notable changes to this project are logged here.
   dashboard alike.
 - `Entity.interfaced` still described the confidence penalty that the
   never-auto-eliminate policy replaced.
+- A timing gap was described as "Residual is material" next to a net amount of
+  0.00. Its legs agree; what was banded HIGH is the balance straddling the
+  cutoff, and the rationale now says that. The LLM triage prompt also listed
+  only four of the six never-auto-resolved types and asked for "lower
+  confidence" on manually loaded entities where the policy is never to
+  auto-eliminate them. The code already enforced both; the prompt and the docs
+  that quote it now agree with it.
 
 ## [0.1.0] - 2026-01-09
 
