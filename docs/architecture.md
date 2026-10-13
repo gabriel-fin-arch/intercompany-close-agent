@@ -176,7 +176,8 @@ Note that neither branch returns a classifier's output directly --
 Three things have to be true for an exception to be auto-resolved:
 
 1. its type isn't one of the six in `ALWAYS_NEEDS_JUDGMENT`,
-2. the residual is immaterial, and
+2. the amount at stake is immaterial -- the residual, or for a timing gap
+   the whole balance, and
 3. no entity on either side of the balance is manually loaded.
 
 All three are stated in `triage/llm.py`'s system prompt for the live model,
