@@ -2,6 +2,16 @@
 
 All notable changes to this project are logged here.
 
+## [Unreleased]
+
+### Fixed
+- Dependency floors that could not run the code. `typer>=0.12` crashes on
+  `--help` against current click (0.16 is the first that works),
+  `langgraph-checkpoint` was imported but never declared and needs 4.0.1 for
+  `allowed_msgpack_modules`, and `starlette<1.4` had no floor at all, so a
+  lowest-version install picked starlette 0.1.0. Checked by installing the
+  lowest versions the constraints allow and running the suite.
+
 ## [0.1.0] - 2026-01-09
 
 ### Added

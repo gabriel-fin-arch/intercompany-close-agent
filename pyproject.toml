@@ -15,13 +15,16 @@ classifiers = [
 ]
 dependencies = [
     "pydantic>=2.6",
-    "typer>=0.12",
+    "typer>=0.16",
     "langgraph>=0.2",
+    # Imported directly (graph.py builds the serializer itself), and
+    # allowed_msgpack_modules only exists from 4.0.1.
+    "langgraph-checkpoint>=4.0.1",
     "langchain-anthropic>=0.2",
     "langchain-core>=0.3",
     "streamlit>=1.35",
     "python-dotenv>=1.0",
-    "starlette<1.4",
+    "starlette>=0.46,<1.4",
 ]
 
 [project.optional-dependencies]
