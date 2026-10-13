@@ -36,6 +36,17 @@ def test_run_against_generated_data_offline(tmp_path: Path, monkeypatch):
     assert "Audit trail" in run_result.output
 
 
+def test_every_command_prints_its_help():
+    """Below typer 0.16, --help goes through a click API that changed in 8.2 and
+    dies with a traceback. Nothing else in this file asks for help, so the suite
+    stayed green on a floor that could not print a usage line."""
+    for command in ([], ["run"], ["generate-data"]):
+        result = runner.invoke(app, [*command, "--help"])
+
+        assert result.exit_code == 0, result.output
+        assert "Usage" in result.output
+
+
 def test_run_with_missing_data_dir_fails_loudly(tmp_path: Path):
     """A bad --data-dir should error out, not silently produce an empty run."""
     missing_dir = tmp_path / "does-not-exist"
