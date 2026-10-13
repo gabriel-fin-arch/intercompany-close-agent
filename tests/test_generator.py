@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import random
+from pathlib import Path
 
-from intercompany_close_agent.synthetic.generator import anomaly_non_interfaced_noise
+from intercompany_close_agent.synthetic.generator import anomaly_non_interfaced_noise, generate
 
 
 def _rows(entity: str, counterparty: str, reference: str) -> list[dict]:
@@ -29,3 +30,14 @@ def test_non_interfaced_noise_is_a_no_op_between_two_interfaced_entities():
     rows = _rows("US01", "DE01", "ROYALTY-2025-1021")
     out = anomaly_non_interfaced_noise(rows, random.Random(0))
     assert out[1]["reference"] == "ROYALTY-2025-1021"  # unchanged
+
+
+def test_regenerating_reproduces_the_committed_sample_byte_for_byte(tmp_path: Path):
+    """The README tells people to run generate-data. If that rewrites the
+    committed files with different bytes -- even only line endings -- every
+    fresh clone ends up with three modified files nobody touched."""
+    committed = Path(__file__).resolve().parent.parent / "data" / "synthetic"
+    generate(out_dir=tmp_path)
+
+    for name in ("entities.csv", "ic_ledger.csv", "trial_balance.csv"):
+        assert (tmp_path / name).read_bytes() == (committed / name).read_bytes(), name
