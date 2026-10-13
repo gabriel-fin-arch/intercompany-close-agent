@@ -14,7 +14,7 @@ import os
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ICException, Materiality
 from intercompany_close_agent.triage.models import TriageClassification, TriageResult
-from intercompany_close_agent.triage.rules import ALWAYS_NEEDS_JUDGMENT
+from intercompany_close_agent.triage.rules import ALWAYS_NEEDS_JUDGMENT, amount_at_stake
 
 
 def _llm_is_configured() -> bool:
@@ -49,7 +49,7 @@ def _enforce_taxonomy(
 
     Three things gate auto-resolution, and none of them are optional just
     because a live model call said otherwise: the exception type isn't one
-    of the six that are never auto-resolved, the residual is immaterial,
+    of the six that are never auto-resolved, the amount at stake is immaterial,
     and no entity on either side of the balance is manually loaded. All
     three are also stated in the system prompt in `triage/llm.py` -- but a
     prompt is a request, not a guarantee. Free text from the ledger (an
@@ -74,7 +74,7 @@ def _enforce_taxonomy(
         )
 
     if exc.materiality == Materiality.HIGH:
-        return _override(result, "the residual is above the group materiality threshold")
+        return _override(result, f"{amount_at_stake(exc)} is above the group materiality threshold")
 
     manual = _manual_entities(exc, entities)
     if manual:

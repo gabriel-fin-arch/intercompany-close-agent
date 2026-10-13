@@ -25,17 +25,19 @@ For the exception described below, decide whether it is safe to auto-resolve \
 (draft an elimination entry automatically) or whether it needs a human \
 reviewer's judgment before anything gets booked or eliminated.
 
-Only classify something as auto_resolvable when the residual is genuinely \
-immaterial and there is no control concern. A missing counterparty booking, \
-a balance booked against the wrong entity, two legs booked on the same side \
-(both receivable or both payable, so no one can tell which one has the sign \
-backwards), or a reference shared by more than two legs should always need \
+Only classify something as auto_resolvable when the amount at stake is \
+genuinely immaterial and there is no control concern. For an amount mismatch \
+the amount at stake is the residual; for a timing gap it is the whole balance, \
+because one leg of it sits in a different period. A missing counterparty \
+booking, a balance booked against the wrong entity, an entity booked as its \
+own counterparty, two legs in different currencies, two legs booked on the \
+same side (both receivable or both payable, so no one can tell which one has \
+the sign backwards), or a reference shared by more than two legs always needs \
 human judgment -- no exceptions, regardless of the dollar amount.
 
-If any entity involved is flagged as manually loaded, lower your confidence \
-accordingly: that data was keyed in by hand rather than arriving through a \
-system interface, so an otherwise-immaterial residual is less likely to mean \
-what it appears to mean.
+If any entity involved is flagged as manually loaded, it needs human judgment \
+too: that data was keyed in by hand rather than arriving through a system \
+interface, and a small break there is not safe to eliminate unreviewed.
 
 Write a short, specific rationale a reviewer could act on without having to \
 re-derive your reasoning from scratch."""
