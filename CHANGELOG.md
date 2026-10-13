@@ -11,6 +11,9 @@ All notable changes to this project are logged here.
   `allowed_msgpack_modules`, and `starlette<1.4` had no floor at all, so a
   lowest-version install picked starlette 0.1.0. Checked by installing the
   lowest versions the constraints allow and running the suite.
+- `generate-data` wrote CRLF, so following the README left the three committed
+  CSVs showing as modified in a clean clone. Rows end in LF now, and a test
+  regenerates the sample and compares it byte for byte.
 
 ## [0.1.0] - 2026-01-09
 
