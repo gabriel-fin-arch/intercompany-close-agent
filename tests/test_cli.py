@@ -52,7 +52,22 @@ def test_run_with_missing_data_dir_fails_loudly(tmp_path: Path):
     missing_dir = tmp_path / "does-not-exist"
     result = runner.invoke(app, ["run", "--data-dir", str(missing_dir)])
 
-    assert result.exit_code != 0
+    assert result.exit_code == 1
+    assert "not found" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_run_refuses_a_ledger_with_nothing_in_it(tmp_path: Path):
+    data_dir = tmp_path / "synthetic"
+    runner.invoke(app, ["generate-data", "--out-dir", str(data_dir)])
+    header = (data_dir / "ic_ledger.csv").read_text(encoding="utf-8").splitlines()[0]
+    (data_dir / "ic_ledger.csv").write_text(header + "\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["run", "--data-dir", str(data_dir)])
+
+    assert result.exit_code == 1
+    assert "nothing to close" in result.output
+    assert "No items needed human review" not in result.output
 
 
 def test_run_against_committed_sample_dataset():
