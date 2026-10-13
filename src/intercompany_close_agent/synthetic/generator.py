@@ -330,8 +330,12 @@ def build_trial_balance_rows(rng: random.Random, ic_rows: list[dict]) -> list[di
 
 def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    # The csv module ends rows with \r\n on every platform unless told
+    # otherwise. The committed sample is LF (.gitattributes), so a CRLF rewrite
+    # of identical data left all three files showing as modified after anyone
+    # followed the README and regenerated it.
     with path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
