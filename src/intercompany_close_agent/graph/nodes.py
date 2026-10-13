@@ -23,6 +23,7 @@ from intercompany_close_agent.graph.state import CloseState
 from intercompany_close_agent.matching.engine import match_transactions
 from intercompany_close_agent.models.elimination import Elimination
 from intercompany_close_agent.models.exception import ExceptionType, ICException
+from intercompany_close_agent.models.ledger import ICTransaction
 from intercompany_close_agent.models.review import ReviewAction, ReviewDecision
 from intercompany_close_agent.reconciliation.tieout import out_of_tolerance, reconcile_to_trial_balance
 from intercompany_close_agent.triage.models import TriageClassification
@@ -148,7 +149,27 @@ def _residual_notes(ref: str, exc: ICException, elim: Elimination) -> list[str]:
     return [
         f"{ref}: eliminated at {elim.lines[0].amount}, but {entity_code}'s control account "
         f"carries an unexplained residual of {residual} after posting"
-        for entity_code, residual in elimination_residuals(exc, elim)
+        for entity_code, residual in elimination_residuals(exc.legs, elim)
+    ]
+
+
+def _within_tolerance_notes(
+    pairs: list[tuple[ICTransaction, ICTransaction]], eliminations: list[Elimination]
+) -> list[str]:
+    """Audit-trail lines for what a clean pair's elimination leaves behind.
+
+    A clean pair can net to anything inside the matching tolerance, and its
+    elimination books the receivable leg's amount on both sides, so the
+    payable side keeps the difference. Small by construction -- that's what
+    the tolerance is for -- but it's still a number nobody booked, and the
+    exception path already writes the same thing down for larger ones.
+    """
+    pairs_by_reference = {pair[0].reference: pair for pair in pairs}
+    return [
+        f"{elim.reference}: matched within tolerance and eliminated at {elim.lines[0].amount}; "
+        f"{entity_code}'s control account keeps a residual of {residual} after posting"
+        for elim in eliminations
+        for entity_code, residual in elimination_residuals(list(pairs_by_reference[elim.reference]), elim)
     ]
 
 
@@ -158,7 +179,7 @@ def finalize(state: CloseState) -> dict:
     rejected or is still pending.
     """
     eliminations = build_eliminations(state["clean_pairs"])
-    notes: list[str] = []
+    notes = _within_tolerance_notes(state["clean_pairs"], eliminations)
 
     triage_by_reference = {t.reference: t for t in state["triage_results"]}
     exceptions_by_reference = {exc.reference: exc for exc in state["exceptions"]}

@@ -11,10 +11,12 @@ gets its intercompany receivable credited. Booking both sides to a generic
 IC control accounts standing at group level -- which is precisely what an
 elimination is supposed to remove, and precisely what reconciliation/ checks.
 
-For a clean pair this is exact: the amounts already net to within a
-sub-dollar tolerance, so both sides clear. For an exception with a genuine,
-larger residual -- the whole reason it wasn't a clean pair -- it's exact for
-one side only; see `elimination_residuals()` for the other side, and
+The entry books the receivable leg's own amount on both sides, so the
+receivable side always clears exactly. The payable side clears exactly only
+when the legs net to zero. A clean pair can be off by anything inside the
+matching tolerance -- USD 1.00, or 0.01% of a large balance -- and an
+exception by more, which is why it's an exception. Either way, see
+`elimination_residuals()` for what's left on the other side, and
 `graph/nodes.py::finalize`, which surfaces whatever it finds rather than
 letting the gap disappear.
 """
@@ -97,8 +99,11 @@ def build_eliminations(pairs: list[tuple[ICTransaction, ICTransaction]]) -> list
     return [build_elimination(pair) for pair in pairs if abs(pair[0].amount) > 0]
 
 
-def elimination_residuals(exc: ICException, elimination: Elimination) -> list[tuple[str, Decimal]]:
+def elimination_residuals(legs: list[ICTransaction], elimination: Elimination) -> list[tuple[str, Decimal]]:
     """Per-entity control-account residual an elimination leaves standing.
+
+    Takes the legs rather than the exception so it works for a clean pair
+    too, whose legs can differ by up to the matching tolerance.
 
     `build_elimination_from_exception` books a single amount against both
     entities' control accounts -- the receivable leg's own amount by
@@ -119,7 +124,7 @@ def elimination_residuals(exc: ICException, elimination: Elimination) -> list[tu
     """
     posted_by_entity = {line.entity_code: line.amount for line in elimination.lines}
     residuals: list[tuple[str, Decimal]] = []
-    for leg in exc.legs:
+    for leg in legs:
         posted = posted_by_entity.get(leg.entity_code)
         if posted is None:
             continue
@@ -173,7 +178,7 @@ def build_elimination_from_exception(
 
     elimination = Elimination(reference=exc.reference, lines=lines, narrative=narrative)
 
-    residuals = elimination_residuals(exc, elimination)
+    residuals = elimination_residuals(exc.legs, elimination)
     if residuals:
         residual_text = "; ".join(
             f"{entity_code} carries an unexplained residual of {residual} after posting"

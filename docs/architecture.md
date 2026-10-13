@@ -288,3 +288,16 @@ next to the elimination that caused it, instead of only turning up the next
 time someone runs a tie-out and wonders why a balance that was supposedly
 eliminated still isn't zero. See `tests/test_eliminations.py` and
 `tests/test_graph.py::test_finalize_surfaces_a_control_account_residual_left_by_an_elimination`.
+
+Clean pairs get the same treatment. "Clean" means the legs net to within
+tolerance, not to zero, and the entry is built the same way, so the payable
+side can keep a difference of up to the tolerance -- 0.02 on
+`MGMT-FEE-2025-1006` in the sample data:
+
+```
+MGMT-FEE-2025-1006: matched within tolerance and eliminated at 41780.79;
+US01's control account keeps a residual of -0.02 after posting
+```
+
+Writing that off is a policy decision for the group, not something this
+code should do on its own; recording it is the part that isn't optional.

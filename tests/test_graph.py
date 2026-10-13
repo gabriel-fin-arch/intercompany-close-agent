@@ -391,3 +391,27 @@ def test_missing_counterparty_never_auto_resolves(monkeypatch):
 
     pending_refs = {item["reference"] for item in result["__interrupt__"][0].value["pending_review"]}
     assert missing_counterparty_refs.issubset(pending_refs)
+
+
+def test_finalize_records_what_a_within_tolerance_clean_pair_leaves_behind(monkeypatch):
+    """A clean pair only has to net to within tolerance, not to zero, and its
+    elimination books the receivable leg's amount on both sides. Whatever the
+    payable side was off by stays in that entity's control account, and the
+    audit trail is where a reviewer has to be able to find it."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-tolerance")
+    off_by_a_little = [(a, b) for a, b in result["clean_pairs"] if a.amount + b.amount != 0]
+    assert off_by_a_little, "fixture dataset should contain a clean pair that nets to within tolerance, not zero"
+    leg_a, leg_b = off_by_a_little[0]
+    payable = leg_a if leg_a.amount < 0 else leg_b
+
+    pending = result["__interrupt__"][0].value["pending_review"]
+    final = resume_close(graph, config, [{"reference": item["reference"], "action": "reject"} for item in pending])
+
+    assert any(
+        leg_a.reference in entry and "within tolerance" in entry and payable.entity_code in entry
+        for entry in final["audit_trail"]
+    )
