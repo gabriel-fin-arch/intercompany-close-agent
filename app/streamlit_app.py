@@ -8,33 +8,19 @@ of resuming the one already in flight.
 
 from __future__ import annotations
 
-import csv
 from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 
 from intercompany_close_agent.graph.graph import resume_close, run_close
-from intercompany_close_agent.ingest.loaders import load_ic_transactions, load_trial_balance
-from intercompany_close_agent.models.entity import Entity
+from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
 from intercompany_close_agent.models.review import ReviewAction, parse_override_amount
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 
 load_dotenv()
 
 st.set_page_config(page_title="Intercompany Close Agent", layout="wide")
-
-
-def _load_entities(path: Path) -> list[Entity]:
-    with path.open(encoding="utf-8") as fh:
-        return [Entity(**row) for row in csv.DictReader(fh)]
-
-
-def _load_dataset(data_dir: Path):
-    entities = _load_entities(data_dir / "entities.csv")
-    trial_balance = load_trial_balance(data_dir / "trial_balance.csv")
-    transactions = load_ic_transactions(data_dir / "ic_ledger.csv")
-    return entities, trial_balance, transactions
 
 
 st.title("Intercompany Close Agent")
@@ -50,7 +36,11 @@ with st.sidebar:
         st.rerun()
 
 if run_clicked:
-    entities, trial_balance, transactions = _load_dataset(Path(data_dir_input))
+    try:
+        entities, trial_balance, transactions = load_dataset(Path(data_dir_input))
+    except DataLoadError as exc:
+        st.error(f"Cannot run the close: {exc}")
+        st.stop()
     graph, config, result = run_close(transactions, trial_balance, entities, thread_id="dashboard-run")
     st.session_state["graph"] = graph
     st.session_state["config"] = config
