@@ -1,6 +1,6 @@
 # intercompany-close-agent
 
-[![CI](https://github.com/Maxxym404/intercompany-close-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Maxxym404/intercompany-close-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/gabriel-fin-arch/intercompany-close-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/gabriel-fin-arch/intercompany-close-agent/actions/workflows/ci.yml)
 
 An agent-first assistant for the intercompany leg of a multi-entity group
 consolidation close: it matches counterparty bookings, proposes elimination
