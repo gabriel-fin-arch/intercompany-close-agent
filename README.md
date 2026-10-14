@@ -12,9 +12,13 @@ it's safe to run and inspect end to end. Runs fully offline by default. A
 Claude API key upgrades the triage narrative; it doesn't change what gets
 booked.
 
-> **Provenance.** Imported from an older private workspace in Oct 2026. Commit
-> dates are preserved; public GitHub metadata such as repo creation, Actions
-> runs and activity events starts at import.
+> **About the commit history.** I built this between September 2025 and
+> January 2026, with a second pass in July and August 2026. The git history
+> was reconstructed when I published it here in October 2026, so commit dates
+> before then are approximate: they were set when the history was rebuilt,
+> not recorded by git at the time. I rewrote that reconstruction a few times
+> while publishing, which is what the force-pushes in the Activity tab are.
+> Dates from October 2026 on are real.
 
 ## Review in 5 minutes
 
@@ -23,6 +27,7 @@ booked.
 - §3: the numbers are deterministic Python with tests; the model only triages
   and writes the rationale.
 - `docs/human-in-the-loop.md`: the six exception types that never auto-resolve.
+- How I built this: which decisions are mine and what an AI assistant wrote.
 - The command block below runs the whole close offline; CI is green.
 
 ![The reviewer dashboard after a finalized close: the control-account tie-out, the full audit trail with its residual notes, and the elimination journal entries the run booked](docs/img/dashboard.png)
@@ -170,6 +175,17 @@ That taxonomy is a judgment call, not a law of nature. It's flagged with a
 disagree with. The full reasoning, including what approve, reject and edit
 each actually book, lives in `docs/human-in-the-loop.md`; the thresholds and
 why they sit where they do are in `docs/architecture.md`.
+
+## How I built this
+
+With an AI coding assistant (Claude Code), and the split is deliberate. The
+accounting design is mine: tying out the control accounts before matching
+anything, the six break types that never auto-resolve, the materiality and
+manually-loaded-entity policy, what approve, reject and edit each book, and
+which anomalies the synthetic data has to contain. The assistant drafted most
+of the code, tests and docs against that design. I reviewed what it produced
+and sent back what was wrong; every decision listed above is one I can walk
+you through.
 
 ## Project layout
 
