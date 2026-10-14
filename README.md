@@ -12,6 +12,19 @@ it's safe to run and inspect end to end. Runs fully offline by default. A
 Claude API key upgrades the triage narrative; it doesn't change what gets
 booked.
 
+> **Provenance.** Imported from an older private workspace in Oct 2026. Commit
+> dates are preserved; public GitHub metadata such as repo creation, Actions
+> runs and activity events starts at import.
+
+## Review in 5 minutes
+
+- §§1–2: the close problem and why tolerances, interfaced status and control
+  accounts are domain decisions, not string matching.
+- §3: the numbers are deterministic Python with tests; the model only triages
+  and writes the rationale.
+- `docs/human-in-the-loop.md`: the six exception types that never auto-resolve.
+- The command block below runs the whole close offline; CI is green.
+
 ![The reviewer dashboard after a finalized close: the control-account tie-out, the full audit trail with its residual notes, and the elimination journal entries the run booked](docs/img/dashboard.png)
 
 ```
