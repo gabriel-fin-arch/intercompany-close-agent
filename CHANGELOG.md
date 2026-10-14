@@ -5,6 +5,10 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- The README's note on the commit history left out what the publishing
+  rewrites actually did. It says so now, and `PROVENANCE.md` lists every
+  force-push, the re-created tag and the deleted CI runs, with how to check
+  each one.
 - The live triage path never ran against a current model. It set
   `temperature=0`, which Claude 4.7 and later reject with a 400, and the
   dispatcher's catch-all fallback turned every one of those into a rule-based

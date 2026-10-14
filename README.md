@@ -13,12 +13,19 @@ Claude API key upgrades the triage narrative; it doesn't change what gets
 booked.
 
 > **About the commit history.** I built this between September 2025 and
-> January 2026, with a second pass in July and August 2026. The git history
-> was reconstructed when I published it here in October 2026, so commit dates
-> before then are approximate: they were set when the history was rebuilt,
-> not recorded by git at the time. I rewrote that reconstruction a few times
-> while publishing, which is what the force-pushes in the Activity tab are.
-> Dates from October 2026 on are real.
+> January 2026, with a second pass in July and August 2026, and first put it on
+> GitHub in August 2026 under an earlier account I've since deleted. I didn't
+> keep a usable git history, so the commits before 14 October 2026 are a
+> reconstruction from my working copy: they follow roughly the order of the
+> work, but their dates, times, messages and intermediate contents are
+> approximate. While publishing here I rewrote that reconstruction several
+> times (the force-pushes in the Activity tab), and some rewrites hid
+> contradictions instead of fixing them: I moved six commits so they no longer
+> predated a starlette release they mention, back-dated the v0.1.0 tag, renamed
+> the commits that said "CI", and deleted the CI runs from those pushes. The
+> earlier versions are still linked from the Activity tab, and
+> [PROVENANCE.md](PROVENANCE.md) lists every change and how to check it. From
+> commit `57a5df7` (14 October 2026) on, the history is as recorded.
 
 ## Review in 5 minutes
 
