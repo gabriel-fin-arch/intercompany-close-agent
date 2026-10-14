@@ -9,12 +9,15 @@ dashboard never need to know which one ran.
 
 from __future__ import annotations
 
+import logging
 import os
 
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ICException, Materiality
 from intercompany_close_agent.triage.models import TriageClassification, TriageResult
 from intercompany_close_agent.triage.rules import ALWAYS_NEEDS_JUDGMENT, amount_at_stake
+
+logger = logging.getLogger(__name__)
 
 
 def _llm_is_configured() -> bool:
@@ -94,11 +97,19 @@ def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None
 
         try:
             return _enforce_taxonomy(exc, llm_triage(exc, entities), entities)
-        except Exception:
+        except Exception as err:
             # A live model call can fail for all sorts of reasons: rate
             # limit, network blip, an unexpected response shape. Falling
             # back to the deterministic rules keeps the close moving
-            # instead of taking the whole run down over one exception.
+            # instead of taking the whole run down over one exception. It
+            # says so, though: a fallback nobody hears about looks exactly
+            # like a model that is working.
+            logger.warning(
+                "LLM triage failed for %s (%s: %s); using the rule-based fallback",
+                exc.reference,
+                type(err).__name__,
+                err,
+            )
             from intercompany_close_agent.triage.rules import triage_exception as rules_triage
 
             return _enforce_taxonomy(exc, rules_triage(exc, entities), entities)

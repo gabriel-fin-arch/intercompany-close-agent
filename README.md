@@ -128,8 +128,10 @@ on a live model call.
 the same output shape either way.** With `ANTHROPIC_API_KEY` and
 `ANTHROPIC_MODEL` set, `triage/llm.py` calls Claude via `langchain-anthropic`
 with structured output. Without them, or if the live call fails for any
-reason (rate limit, network blip), `triage/rules.py` takes over: a small,
-legible set of rules keyed on exception type and materiality. Nothing in
+reason (rate limit, network blip, a model that rejects the request),
+`triage/rules.py` takes over: a small, legible set of rules keyed on exception
+type and materiality. A warning names each exception that fell back and why,
+so a broken model configuration can't pass for a working one. Nothing in
 `graph/nodes.py` or the CLI/dashboard changes based on which path ran; they
 only ever see a `TriageResult`. That's also what makes the whole project
 runnable and testable without an API key.

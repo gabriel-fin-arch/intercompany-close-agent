@@ -6,6 +6,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from langchain_anthropic import ChatAnthropic
 
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
@@ -72,6 +73,20 @@ def test_build_chain_constructs_a_runnable_chain(monkeypatch):
     chain = _build_chain()
 
     assert hasattr(chain, "invoke")
+
+
+def test_build_chain_leaves_temperature_at_the_default(monkeypatch):
+    """Claude 4.7 and later return a 400 for any non-default temperature, so
+    setting one would break the live path on every current model."""
+    monkeypatch.setenv("ANTHROPIC_MODEL", "some-model")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+
+    chain = _build_chain()
+
+    bound = [getattr(step, "bound", step) for step in chain.steps]
+    chat_models = [model for model in bound if isinstance(model, ChatAnthropic)]
+    assert chat_models, "no ChatAnthropic in the chain"
+    assert all(model.temperature is None for model in chat_models)
 
 
 def test_triage_exception_maps_the_model_judgment_onto_the_reference(monkeypatch):

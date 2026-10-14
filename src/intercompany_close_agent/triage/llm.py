@@ -47,7 +47,10 @@ def _build_chain():
     model_name = os.environ.get("ANTHROPIC_MODEL")
     if not model_name:
         raise RuntimeError("ANTHROPIC_MODEL is not set")
-    llm = ChatAnthropic(model=model_name, temperature=0)
+    # No temperature. Claude 4.7 and later reject any non-default value with a
+    # 400, and the fallback in triage/node.py used to swallow that, so every
+    # run against a current model quietly came back from the rules instead.
+    llm = ChatAnthropic(model=model_name)
     structured_llm = llm.with_structured_output(TriageJudgment)
     prompt = ChatPromptTemplate.from_messages(
         [
