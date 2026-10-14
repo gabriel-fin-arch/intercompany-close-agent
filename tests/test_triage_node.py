@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date
 from decimal import Decimal
 
@@ -71,6 +72,24 @@ def test_falls_back_to_rules_when_llm_call_fails(monkeypatch):
 
     # didn't blow up -- fell back to the deterministic rules path
     assert result.classification == TriageClassification.AUTO_RESOLVABLE
+
+
+def test_a_fallback_is_announced_not_silent(monkeypatch, caplog):
+    """A model that 400s on every call and a model that works produce the same
+    shape of result. The warning is the only way to tell them apart."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "test-model")
+
+    def broken_llm_triage(exc: ICException, entities=None) -> TriageResult:
+        raise RuntimeError("simulated 400")
+
+    monkeypatch.setattr("intercompany_close_agent.triage.llm.triage_exception", broken_llm_triage)
+
+    with caplog.at_level(logging.WARNING, logger="intercompany_close_agent.triage.node"):
+        triage_node.triage_exception(_exc("REF-9"))
+
+    assert "REF-9" in caplog.text
+    assert "simulated 400" in caplog.text
 
 
 def test_triage_all_preserves_order():

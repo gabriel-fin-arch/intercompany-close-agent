@@ -5,6 +5,11 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- The live triage path never ran against a current model. It set
+  `temperature=0`, which Claude 4.7 and later reject with a 400, and the
+  dispatcher's catch-all fallback turned every one of those into a rule-based
+  result without a word. The temperature is gone, and a fallback now logs a
+  warning naming the reference and the error.
 - Dependency floors that could not run the code. `typer>=0.12` crashes on
   `--help` against current click (0.16 is the first that works),
   `langgraph-checkpoint` was imported but never declared and needs 4.0.1 for
