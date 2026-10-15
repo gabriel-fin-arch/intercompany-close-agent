@@ -12,20 +12,19 @@ it's safe to run and inspect end to end. Runs fully offline by default. A
 Claude API key upgrades the triage narrative; it doesn't change what gets
 booked.
 
-> **About the commit history.** I built this between September 2025 and
-> January 2026, with a second pass in July and August 2026, and first put it on
-> GitHub in August 2026 under an earlier account I've since deleted. I didn't
-> keep a usable git history, so the commits before 14 October 2026 are a
-> reconstruction from my working copy: they follow roughly the order of the
-> work, but their dates, times, messages and intermediate contents are
-> approximate. While publishing here I rewrote that reconstruction several
-> times (the force-pushes in the Activity tab), and some rewrites hid
-> contradictions instead of fixing them: I moved six commits so they no longer
-> predated a starlette release they mention, back-dated the v0.1.0 tag, renamed
-> the commits that said "CI", and deleted the CI runs from those pushes. The
-> earlier versions are still linked from the Activity tab, and
-> [PROVENANCE.md](PROVENANCE.md) lists every change and how to check it. From
-> commit `57a5df7` (14 October 2026) on, the history is as recorded.
+> **About the commit history.** The dates on the commits before 14 October
+> 2026 are not real. I designed this project on 5 August 2026 and built it with
+> Claude Code that month. The commits were backdated to September 2025 to
+> January 2026 as they were made, on my instructions, and the `v0.1.0` tag and
+> the old release date in the changelog belong to that. I first published it in
+> August 2026 under a new account, also named gabriel-fin-arch, that I've since
+> deleted, and on 1 October moved it to this account, which I opened in 2022 as
+> Maxxym404 and later renamed. While publishing I rewrote the history several
+> times to remove contradictions instead of stating them (the force-pushes in
+> the Activity tab), and my first notes here repeated the invented dates.
+> [PROVENANCE.md](PROVENANCE.md) lists every change, what I said that wasn't
+> true, and how to check each one. From commit `57a5df7` (14 October 2026) on,
+> the history is as recorded.
 
 ## Review in 5 minutes
 
@@ -194,7 +193,9 @@ manually-loaded-entity policy, what approve, reject and edit each book, and
 which anomalies the synthetic data has to contain. The assistant drafted most
 of the code, tests and docs against that design. I reviewed what it produced
 and sent back what was wrong; every decision listed above is one I can walk
-you through.
+you through. The commit messages before 14 October 2026 are the assistant's
+too, written in a casual first-person style I asked for; commits it drafts now
+carry a `Co-Authored-By` line.
 
 ## Project layout
 

@@ -20,7 +20,9 @@ dependencies = [
     # Imported directly (graph.py builds the serializer itself), and
     # allowed_msgpack_modules only exists from 4.0.1.
     "langgraph-checkpoint>=4.0.1",
-    "langchain-anthropic>=0.2",
+    # Older versions force a tool call for with_structured_output, which
+    # Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 reject with a 400.
+    "langchain-anthropic>=1.7.3",
     "langchain-core>=0.3",
     "streamlit>=1.35",
     "python-dotenv>=1.0",
