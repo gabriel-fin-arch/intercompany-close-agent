@@ -5,6 +5,13 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- `PROVENANCE.md` gave `78a1e9b` as the `v0.1.0` tag of the 1 October versions.
+  That is the copy the 13 October rewrite made; the first was `f996ff8`, and
+  both early force-pushes re-created it. It also left out that the prompt set
+  how the history should look, not only its dates, and that the badge commit it
+  lists was the only one with a `Co-Authored-By` line. The README's note now
+  says the dates before 13 October are invented: the 13 October commits have
+  their real times.
 - The README's note on the commit history took up most of the first screen.
   It's shorter now and keeps every fact; the detail, including the earlier
   account, is in `PROVENANCE.md`.
