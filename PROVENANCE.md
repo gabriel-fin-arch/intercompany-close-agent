@@ -52,9 +52,11 @@ what this file does instead.
   October 2026. The first run left is #8.
 - **Email.** The versions pushed on 1 October were committed under a personal
   email address, and those orphaned commits still show it.
-- **Contribution graph.** GitHub counted the commits of the rewritten-away
-  versions as well, so the profile showed about three times the 2025 activity
-  that this history contains.
+- **Contribution graph.** GitHub counts the commits of the rewritten-away
+  versions as well, so the profile's graph shows about three times the 2025
+  activity that this history contains. Only GitHub can rebuild it, and the
+  ways to bring the number down myself would mean deleting or hiding these
+  repos, so I've left it as it is and explained it here and on my profile.
 
 ## How to check
 
