@@ -5,6 +5,9 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- The README's note on the commit history took up most of the first screen.
+  It's shorter now and keeps every fact; the detail, including the earlier
+  account, is in `PROVENANCE.md`.
 - The note on the commit history, in the README and `PROVENANCE.md`, still
   said I built this in 2025 and rebuilt a lost git history when publishing.
   Neither is true: I built it in August 2026, and the commits were backdated as

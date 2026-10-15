@@ -12,19 +12,13 @@ it's safe to run and inspect end to end. Runs fully offline by default. A
 Claude API key upgrades the triage narrative; it doesn't change what gets
 booked.
 
-> **About the commit history.** The dates on the commits before 14 October
-> 2026 are not real. I designed this project on 5 August 2026 and built it with
-> Claude Code that month. The commits were backdated to September 2025 to
-> January 2026 as they were made, on my instructions, and the `v0.1.0` tag and
-> the old release date in the changelog belong to that. I first published it in
-> August 2026 under a new account, also named gabriel-fin-arch, that I've since
-> deleted, and on 1 October moved it to this account, which I opened in 2022 as
-> Maxxym404 and later renamed. While publishing I rewrote the history several
-> times to remove contradictions instead of stating them (the force-pushes in
-> the Activity tab), and my first notes here repeated the invented dates.
-> [PROVENANCE.md](PROVENANCE.md) lists every change, what I said that wasn't
-> true, and how to check each one. From commit `57a5df7` (14 October 2026) on,
-> the history is as recorded.
+> **About the commit history.** Commit dates before 14 October 2026 are
+> invented. I built this with Claude Code in August 2026, first published it
+> that month under an earlier account, and had the assistant backdate the
+> history to September 2025–January 2026; while publishing here I rewrote it
+> several times to hide that. [PROVENANCE.md](PROVENANCE.md) lists every
+> change, what I said that wasn't true, and how to check it. From `57a5df7`
+> (14 October 2026) on, the history is as recorded.
 
 ## Review in 5 minutes
 
