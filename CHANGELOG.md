@@ -5,6 +5,9 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- "How I built this" said the assistant drafted most of the code. It wrote all
+  of it, and the tests; the design notes behind it I drafted with the help of
+  an AI chat. The README says so now.
 - `PROVENANCE.md` gave `78a1e9b` as the `v0.1.0` tag of the 1 October versions.
   That is the copy the 13 October rewrite made; the first was `f996ff8`, and
   both early force-pushes re-created it. It also left out that the prompt set
