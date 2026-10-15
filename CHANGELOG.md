@@ -5,6 +5,16 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- The note on the commit history, in the README and `PROVENANCE.md`, still
+  said I built this in 2025 and rebuilt a lost git history when publishing.
+  Neither is true: I built it in August 2026, and the commits were backdated as
+  they were made. Both say so now, along with what I said earlier that wasn't
+  true. The licence year is 2026, and the 0.1.0 entry below gives the date it
+  was tagged.
+- `langchain-anthropic` below 1.7.3 forces a tool call to get structured
+  output, which Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 reject with a 400, so
+  live triage fell back to the rules on every exception with those models. The
+  floor is 1.7.3 now.
 - The README's note on the commit history left out what the publishing
   rewrites actually did. It says so now, and `PROVENANCE.md` lists every
   force-push, the re-created tag and the deleted CI runs, with how to check
@@ -44,7 +54,10 @@ All notable changes to this project are logged here.
   already did for exceptions. The engine docstring still called the tolerance
   "sub-dollar", which stopped being true when it became relative.
 
-## [0.1.0] - 2026-01-09
+## [0.1.0] - 2026-08-10
+
+Tagged on 10 August 2026. Earlier versions of this file, and the re-created
+tag, give 9 January 2026; that date was invented (see `PROVENANCE.md`).
 
 ### Added
 - Project scaffolding (uv, pyproject.toml, license, package layout).
