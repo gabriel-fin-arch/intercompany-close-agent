@@ -5,6 +5,15 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- The commit history has its real dates. Every commit's author date is now the
+  time it was made, taken from my Claude Code session logs, and no file
+  changed. What each publishing rewrite changed in the files is a bridge
+  commit, and the nine commits of 13 August 2026 have back the
+  `Co-Authored-By` line that was removed before 1 October. `v0.1.0` was
+  re-created on the rebuilt commit with its original date. `PROVENANCE.md` says
+  how, with the full commit map and how to check it. The entry below that
+  called the badge commit the only one with a `Co-Authored-By` line was wrong
+  for that reason.
 - "How I built this" said the assistant drafted most of the code. It wrote all
   of it, and the tests; the design notes behind it I drafted with the help of
   an AI chat. The README says so now.
@@ -69,8 +78,10 @@ All notable changes to this project are logged here.
 
 ## [0.1.0] - 2026-08-10
 
-Tagged on 10 August 2026. Earlier versions of this file, and the re-created
-tag, give 9 January 2026; that date was invented (see `PROVENANCE.md`).
+Tagged on 10 August 2026. Earlier versions of this file, and the tag
+re-created on 13 and 14 October, gave 9 January 2026; that date was invented.
+The tag was re-created once more on 15 October 2026, on the rebuilt commit
+and with its original date (see `PROVENANCE.md`).
 
 ### Added
 - Project scaffolding (uv, pyproject.toml, license, package layout).
