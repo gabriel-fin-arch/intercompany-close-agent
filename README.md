@@ -186,12 +186,13 @@ With an AI coding assistant (Claude Code), and the split is deliberate. The
 accounting design is mine: tying out the control accounts before matching
 anything, the six break types that never auto-resolve, the materiality and
 manually-loaded-entity policy, what approve, reject and edit each book, and
-which anomalies the synthetic data has to contain. The assistant drafted most
-of the code, tests and docs against that design. I reviewed what it produced
-and sent back what was wrong; every decision listed above is one I can walk
-you through. The commit messages before 14 October 2026 are the assistant's
-too, written in a casual first-person style I asked for; commits it drafts now
-carry a `Co-Authored-By` line.
+which anomalies the synthetic data has to contain. I worked it out in design
+notes I drafted with the help of an AI chat before any code existed. Claude
+Code wrote the code and the tests, and most of the docs, against that design.
+I reviewed what it produced and sent back what was wrong; every decision
+listed above is one I can walk you through. The commit messages before 14
+October 2026 are the assistant's too, written in a casual first-person style I
+asked for; commits it drafts now carry a `Co-Authored-By` line.
 
 ## Project layout
 
