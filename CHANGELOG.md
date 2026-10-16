@@ -5,6 +5,9 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Fixed
+- The README and `examples/README.md` didn't say that the control-account
+  break in the sample run is planted, so a first-time reader could take it for
+  a bug. Both say so now, and which entity it is with the default seed.
 - The commit history has its real dates. Every commit's author date is now the
   time it was made, taken from my Claude Code session logs, and no file
   changed. What each publishing rewrite changed in the files is a bridge

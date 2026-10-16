@@ -235,6 +235,13 @@ uv run streamlit run app/streamlit_app.py
 uv run pytest
 ```
 
+The sample run is meant to find problems, and the first one it reports is
+deliberate: one entity's intercompany subledger doesn't tie to its trial
+balance (`US01` with the default seed). The generator plants a posting that
+reached the GL but never the subledger, the everyday reason a control account
+won't tie at close, and the tie-out step catches it before anything is
+matched or eliminated.
+
 ## What's out of scope (for now)
 
 FX/CTA translation, AR aging reconciliation, and Special Charges are all
