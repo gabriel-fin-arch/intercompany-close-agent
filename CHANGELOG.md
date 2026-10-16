@@ -4,6 +4,12 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+### Added
+- A "Results on the sample data" block near the top of the README: what an
+  offline run on the committed dataset finds, in three lines.
+  `intercompany_close_agent.sample_results` computes it from a fresh run, and a
+  test fails if the README and the run disagree.
+
 ### Fixed
 - The commit history has its real dates. Every commit's author date is now the
   time it was made, taken from my Claude Code session logs, and no file
