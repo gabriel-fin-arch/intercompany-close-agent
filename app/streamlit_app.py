@@ -113,11 +113,15 @@ elif "__interrupt__" in result:
             st.write(f"**Why:** {item['detected_reason']}")
             st.write(f"**Triage rationale** (confidence {item['confidence']:.2f}): {item['rationale']}")
 
+            # No default. Streamlit would otherwise select the first option,
+            # approve, and submitting the worklist would approve every item
+            # nobody opened, in an audit trail that reads as if someone had.
             action = st.radio(
                 "Decision",
                 options=[a.value for a in ReviewAction],
                 key=f"action_{item['reference']}",
                 horizontal=True,
+                index=None,
             )
             note = st.text_input("Reviewer note", key=f"note_{item['reference']}")
             override_amount = None
@@ -140,12 +144,21 @@ elif "__interrupt__" in result:
             }
 
     if st.button("Submit decisions", type="primary"):
-        # Validate the free-text amounts before resuming: an unparseable one
-        # would otherwise crash resume_close deep in pydantic, losing the
-        # whole worklist. Report each bad field and let the reviewer fix it.
+        # Every item needs a decision someone picked, and the free-text
+        # amounts are validated before resuming: an unparseable one would
+        # otherwise crash resume_close deep in pydantic, losing the whole
+        # worklist. Report each problem and let the reviewer fix it.
         payload: list[dict] = []
         errors: list[str] = []
+        undecided = [ref for ref, decision in decisions.items() if decision["action"] is None]
+        if undecided:
+            errors.append(
+                f"No decision yet for {len(undecided)} item(s): {', '.join(undecided)}. "
+                f"Each needs approve, reject or edit; reject books nothing."
+            )
         for ref, decision in decisions.items():
+            if decision["action"] is None:
+                continue
             try:
                 amount = parse_override_amount(decision["override_amount"])
             except ValueError as exc:
