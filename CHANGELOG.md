@@ -5,6 +5,18 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- An evidence pack for every finalized close: one folder with who prepared
+  and reviewed it, the policy, the code version, the SHA-256 of each input
+  file, the tie-out, every exception with its triage rationale and decision,
+  every decision with its reviewer and time, and the journal lines booked, in
+  CSV, JSON and text. The dashboard writes it under `evidence/` and offers it
+  as a zip; `run` writes it when the close finalizes without review
+  (`--evidence-dir`). It's read from the run's state, not recomputed.
+- `docs/controls.md`: fourteen controls, each with the code that enforces
+  it, the test that proves it and the file in the pack that evidences it,
+  and what the project doesn't control. A test fails if any file, function
+  or test it names stops existing, or if it cites evidence the pack doesn't
+  write.
 - A close policy file. The materiality threshold and the matching tolerance
   were constants in `matching/engine.py`; they're read from a TOML file now,
   passed with `run --policy` or the dashboard's Policy file field, and each

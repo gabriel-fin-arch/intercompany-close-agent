@@ -82,3 +82,4 @@ Loaded 7 entities, 53 IC transaction legs
 
 Run the reviewer dashboard to approve, reject or edit these:
   uv run streamlit run app/streamlit_app.py
+The close finalizes, and writes its evidence pack, once every item has a decision.

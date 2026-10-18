@@ -25,12 +25,14 @@ def _field(elements, label: str):
     return next(element for element in elements if element.label == label)
 
 
-def _start(monkeypatch, prepared_by: str = PREPARER, policy: str = "") -> AppTest:
+def _start(monkeypatch, workdir: Path, prepared_by: str = PREPARER, policy: str = "") -> AppTest:
     # Empty rather than unset: the app calls load_dotenv(), which leaves a
     # variable that is already set alone, so a local .env can't put the test
     # on the live model.
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     monkeypatch.setenv("ANTHROPIC_MODEL", "")
+    # A finalized close writes its evidence pack under the working directory.
+    monkeypatch.chdir(workdir)
 
     app = AppTest.from_file(str(APP), default_timeout=60)
     app.run()
@@ -42,9 +44,9 @@ def _start(monkeypatch, prepared_by: str = PREPARER, policy: str = "") -> AppTes
 
 
 @pytest.fixture
-def dashboard(monkeypatch) -> AppTest:
+def dashboard(monkeypatch, tmp_path: Path) -> AppTest:
     """The dashboard with the sample close run and paused at the worklist."""
-    app = _start(monkeypatch)
+    app = _start(monkeypatch, tmp_path)
 
     assert "__interrupt__" in app.session_state["result"]
     return app
@@ -113,8 +115,8 @@ def test_a_decision_the_reviewer_picked_is_booked_in_their_name(dashboard: AppTe
     assert [s.value for s in dashboard.success] == ["Close finalized."]
 
 
-def test_the_close_does_not_run_until_someone_says_who_prepared_it(monkeypatch):
-    app = _start(monkeypatch, prepared_by="  ")
+def test_the_close_does_not_run_until_someone_says_who_prepared_it(monkeypatch, tmp_path: Path):
+    app = _start(monkeypatch, tmp_path, prepared_by="  ")
 
     assert "result" not in app.session_state
     [error] = app.error
@@ -143,8 +145,8 @@ def test_the_preparer_cannot_review_the_worklist(dashboard: AppTest):
     assert f"{PREPARER} prepared this run" in error.value
 
 
-def test_the_policy_file_field_sets_the_policy_and_the_trail_says_which(monkeypatch):
-    app = _start(monkeypatch, policy=str(EXAMPLE_POLICY))
+def test_the_policy_file_field_sets_the_policy_and_the_trail_says_which(monkeypatch, tmp_path: Path):
+    app = _start(monkeypatch, tmp_path, policy=str(EXAMPLE_POLICY))
 
     trail = app.session_state["result"]["audit_trail"]
     assert trail[0] == f"prepared by {PREPARER}"
@@ -155,9 +157,23 @@ def test_a_policy_file_the_close_cannot_use_stops_the_run(monkeypatch, tmp_path:
     bad = tmp_path / "policy.toml"
     bad.write_text("materiality_threshold = -5\n", encoding="utf-8")
 
-    app = _start(monkeypatch, policy=str(bad))
+    app = _start(monkeypatch, tmp_path, policy=str(bad))
 
     assert "result" not in app.session_state
     [error] = app.error
     assert error.value.startswith("Cannot run the close:")
     assert "materiality_threshold" in error.value
+
+
+def test_a_finalized_close_writes_its_evidence_pack_and_offers_it(dashboard: AppTest, tmp_path: Path):
+    count = len(_decisions(dashboard))
+    _reject_all(dashboard)
+
+    _submit(dashboard)
+
+    [folder] = (tmp_path / "evidence").iterdir()
+    assert dashboard.session_state["evidence"].resolve() == folder.resolve()
+    rows = (folder / "decisions.csv").read_text(encoding="utf-8").splitlines()
+    assert len(rows) == count + 1
+    assert all(f",reject,{REVIEWER}," in row for row in rows[1:])
+    assert [button.proto.label for button in dashboard.get("download_button")] == ["Download evidence pack"]

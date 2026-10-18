@@ -185,9 +185,11 @@ can't reach `finalize` as an approval. Reject is the choice for an item that
 can't be settled yet: it books nothing, and the audit trail says so.
 
 Every path leaves a trail: which exceptions were auto-resolved and by what
-rule or model call, which were escalated, what a human decided and when.
-`ReviewDecision.decided_at` and the running `audit_trail` list exist so that
-"why does this number look the way it does" always has an answer.
+rule or model call, which were escalated, what a human decided, who, and
+when. `ReviewDecision.decided_at` and the running `audit_trail` list exist so
+that "why does this number look the way it does" always has an answer, and a
+finalized run writes all of it to an evidence pack, one folder per run;
+`docs/controls.md` says which file in it is the evidence for which control.
 
 ## What this project doesn't try to solve
 
