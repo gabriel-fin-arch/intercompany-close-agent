@@ -30,6 +30,8 @@ booked.
 - `docs/human-in-the-loop.md`: the six exception types that never auto-resolve.
 - `docs/controls.md`: each control, the code that enforces it, the test that
   proves it, and what the evidence pack of a finalized run keeps for it.
+- `docs/scale.md`: the same close on a 60-entity group with 3,005 ledger
+  lines, timed.
 - How I built this: which decisions are mine and what an AI assistant wrote.
 - The command block below runs the whole close offline; CI is green.
 
@@ -228,6 +230,12 @@ uv run python -m intercompany_close_agent.cli run
 
 # same, with your group's materiality and tolerances (this file has the defaults)
 uv run python -m intercompany_close_agent.cli run --policy examples/policy.toml
+
+# same, from one Excel workbook instead of three CSVs (this one holds the sample)
+uv run python -m intercompany_close_agent.cli run --data examples/close_template.xlsx
+
+# a 60-entity group, generated, closed offline and timed (see docs/scale.md)
+uv run python -m intercompany_close_agent.cli scale-run
 
 # same, but with live Claude triage narratives instead of the rule fallback
 cp .env.example .env   # then fill in ANTHROPIC_API_KEY and ANTHROPIC_MODEL

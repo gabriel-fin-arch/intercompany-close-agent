@@ -36,6 +36,14 @@ interfaced entities load straight from the ERP and don't re-key anything.
 The matching engine doesn't fuzzy-match references back together on purpose
 -- see `docs/human-in-the-loop.md` for why.
 
+**`close_template.xlsx`** -- the committed sample as one workbook, with
+the three tables as sheets (entities, trial_balance, ic_ledger) and the
+same columns as the CSVs. It's the template for a close team's own data:
+`run --data close_template.xlsx`, or the dashboard's data field, reads it
+through the same checks as the CSVs, and errors name the sheet and row.
+`write-workbook` makes it from a folder of CSVs; a test checks that it
+holds exactly the sample.
+
 **`policy.toml`** -- a close policy with the built-in defaults spelled out:
 the materiality threshold and the matching tolerance. Copy it, change it,
 and pass it with `run --policy` or the dashboard's **Policy file** field.

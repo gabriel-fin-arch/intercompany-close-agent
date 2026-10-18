@@ -27,10 +27,16 @@ dependencies = [
     "streamlit>=1.35",
     "python-dotenv>=1.0",
     "starlette>=0.46,<1.4",
+    # Reads the close inputs from an .xlsx workbook (ingest/loaders.py).
+    "openpyxl>=3.1",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "types-openpyxl>=3.1",
+]
 
 [build-system]
 requires = ["hatchling"]

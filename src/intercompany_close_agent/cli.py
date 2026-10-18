@@ -1,8 +1,10 @@
 """Command-line interface for the intercompany close agent.
 
-Two commands:
-  generate-data  -- regenerate the synthetic dataset
-  run            -- run the close pipeline end to end and print the results
+Four commands:
+  generate-data   -- regenerate the synthetic dataset
+  write-workbook  -- write a folder of CSV inputs as one .xlsx workbook
+  run             -- run the close pipeline end to end and print the results
+  scale-run       -- generate a group the size of a real one, close it offline, time it
 
 `run` works with or without an Anthropic API key: with one (and
 ANTHROPIC_MODEL set), triage uses Claude; without, it falls back to the
@@ -23,7 +25,10 @@ from dotenv import load_dotenv
 from intercompany_close_agent.evidence import write_pack
 from intercompany_close_agent.graph.graph import run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
+from intercompany_close_agent.ingest.workbook import write_workbook
 from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy, PolicyError
+from intercompany_close_agent.scale import report as scale_report
+from intercompany_close_agent.scale import scale_run as run_at_scale
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 from intercompany_close_agent.synthetic.generator import generate as generate_dataset
 
@@ -35,15 +40,43 @@ def generate_data(
     seed: int = typer.Option(14, help="RNG seed"),
     pairs: int = typer.Option(26, help="Number of IC pairs to generate before anomalies"),
     out_dir: Path = typer.Option(DEFAULT_DATA_DIR, help="Where to write the CSVs"),
+    entities: int = typer.Option(7, help="Number of legal entities; 7 is the committed sample's group"),
+    anomaly_rate: float = typer.Option(0.35, help="Share of balances broken on purpose"),
 ) -> None:
     """Regenerate the synthetic dataset."""
-    generate_dataset(seed=seed, pair_count=pairs, out_dir=out_dir)
+    generate_dataset(seed=seed, pair_count=pairs, out_dir=out_dir, entity_count=entities, anomaly_rate=anomaly_rate)
+
+
+@app.command("write-workbook")
+def write_workbook_command(
+    data_dir: Path = typer.Option(DEFAULT_DATA_DIR, help="Folder with the three CSVs"),
+    out: Path = typer.Option(Path("examples/close_template.xlsx"), help="The workbook to write"),
+) -> None:
+    """Write a folder of CSV inputs as one .xlsx workbook that `run` can read."""
+    typer.echo(f"wrote {write_workbook(data_dir, out)}")
+
+
+@app.command("scale-run")
+def scale_run(
+    entities: int = typer.Option(60, help="Number of legal entities in the group"),
+    pairs: int = typer.Option(1500, help="Number of IC balances, two ledger lines each before anomalies"),
+    seed: int = typer.Option(14, help="RNG seed"),
+    anomaly_rate: float = typer.Option(0.05, help="Share of balances broken on purpose"),
+) -> None:
+    """Generate a group of this size, close it offline, and time each step."""
+    result = run_at_scale(entity_count=entities, pair_count=pairs, seed=seed, anomaly_rate=anomaly_rate)
+    for line in scale_report(result, seed, anomaly_rate):
+        typer.echo(line)
 
 
 @app.command()
 def run(
     data_dir: Path = typer.Option(
-        DEFAULT_DATA_DIR, help="Directory with entities.csv, trial_balance.csv, ic_ledger.csv"
+        DEFAULT_DATA_DIR,
+        "--data-dir",
+        "--data",
+        help="Folder with entities.csv, trial_balance.csv and ic_ledger.csv, or an .xlsx workbook "
+        "with sheets of those names (see examples/close_template.xlsx)",
     ),
     policy_file: Path | None = typer.Option(
         None,

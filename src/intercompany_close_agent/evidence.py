@@ -30,6 +30,8 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+from intercompany_close_agent.ingest.loaders import input_files
+
 ROOT = Path(__file__).resolve().parents[2]
 
 PACK_FILES = (
@@ -40,7 +42,6 @@ PACK_FILES = (
     "decisions.csv",
     "eliminations.csv",
 )
-INPUT_FILES = ("entities.csv", "trial_balance.csv", "ic_ledger.csv")
 
 NOTE = (
     "Produced by intercompany-close-agent. The project's sample data (data/synthetic) is "
@@ -84,8 +85,11 @@ def _csv(header: list[str], rows: list[list[object]]) -> str:
     return out.getvalue()
 
 
-def pack_files(state: dict, data_dir: Path, *, generated_at: datetime | None = None) -> dict[str, str]:
-    """The pack's files, name to content, for a finalized run's state."""
+def pack_files(state: dict, source: Path, *, generated_at: datetime | None = None) -> dict[str, str]:
+    """The pack's files, name to content, for a finalized run's state.
+
+    source is what the run read: a folder of CSVs or a workbook.
+    """
     if "eliminations" not in state:
         raise ValueError("the run hasn't finalized; a close has no evidence pack until it has")
 
@@ -111,7 +115,7 @@ def pack_files(state: dict, data_dir: Path, *, generated_at: datetime | None = N
         },
         "code_version": code_version(),
         "inputs": [
-            {"file": str(data_dir / name), "sha256": _sha256(data_dir / name)} for name in INPUT_FILES
+            {"file": str(path), "sha256": _sha256(path)} for path in input_files(source)
         ],
         "counts": {
             "ic_transaction_legs": len(state.get("ic_transactions", [])),
@@ -205,14 +209,14 @@ def pack_name(generated_at: datetime) -> str:
     return f"close-{generated_at:%Y%m%dT%H%M%SZ}"
 
 
-def write_pack(state: dict, out_root: Path, data_dir: Path) -> Path:
+def write_pack(state: dict, out_root: Path, source: Path) -> Path:
     """Write a finalized run's pack into a new folder under out_root.
 
     The folder is named for the time it was written. A second pack in the
     same second gets a suffix rather than overwriting the first.
     """
     generated_at = datetime.now(UTC)
-    files = pack_files(state, data_dir, generated_at=generated_at)
+    files = pack_files(state, source, generated_at=generated_at)
     out_root.mkdir(parents=True, exist_ok=True)
     folder = out_root / pack_name(generated_at)
     suffix = 1

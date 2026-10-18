@@ -193,3 +193,11 @@ def test_a_cli_run_that_finalizes_writes_its_pack(tmp_path: Path, monkeypatch):
     assert f"Evidence pack: {folder}" in result.output
     run = json.loads((folder / "run.json").read_text(encoding="utf-8"))
     assert (run["prepared_by"], run["reviewers"], run["counts"]["eliminations"]) == (PREPARER, [], 1)
+
+
+def test_a_run_from_a_workbook_records_the_workbook_as_its_input(final: dict):
+    template = DATA_DIR.parent.parent / "examples" / "close_template.xlsx"
+
+    run = json.loads(pack_files(final, template)["run.json"])
+
+    assert run["inputs"] == [{"file": str(template), "sha256": hashlib.sha256(template.read_bytes()).hexdigest()}]
