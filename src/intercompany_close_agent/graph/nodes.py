@@ -24,7 +24,7 @@ from intercompany_close_agent.matching.engine import match_transactions
 from intercompany_close_agent.models.elimination import Elimination
 from intercompany_close_agent.models.exception import ExceptionType, ICException
 from intercompany_close_agent.models.ledger import ICTransaction
-from intercompany_close_agent.models.review import ReviewAction, ReviewDecision
+from intercompany_close_agent.models.review import ReviewAction, ReviewDecision, same_person
 from intercompany_close_agent.reconciliation.tieout import out_of_tolerance, reconcile_to_trial_balance
 from intercompany_close_agent.triage.models import TriageClassification
 from intercompany_close_agent.triage.node import triage_all
@@ -38,7 +38,14 @@ def ingest(state: CloseState) -> dict:
     # its own stage, even though in this project the loading already
     # happened before invoke() was called.
     n_legs = len(state.get("ic_transactions", []))
-    return {"audit_trail": state.get("audit_trail", []) + [f"ingested {n_legs} IC transaction legs"]}
+    return {
+        "audit_trail": state.get("audit_trail", [])
+        + [
+            f"prepared by {state['prepared_by']}",
+            state["policy"].describe(),
+            f"ingested {n_legs} IC transaction legs",
+        ]
+    }
 
 
 def reconcile(state: CloseState) -> dict:
@@ -50,7 +57,7 @@ def reconcile(state: CloseState) -> dict:
     into the human_review interrupt -- the reviewer worklist stays about
     individual balances, and this stays visible in the audit trail.
     """
-    variances = reconcile_to_trial_balance(state["ic_transactions"], state["trial_balance"])
+    variances = reconcile_to_trial_balance(state["ic_transactions"], state["trial_balance"], state["policy"])
     breaks = out_of_tolerance(variances)
 
     trail = state["audit_trail"]
@@ -70,7 +77,7 @@ def reconcile(state: CloseState) -> dict:
 
 
 def match(state: CloseState) -> dict:
-    result = match_transactions(state["ic_transactions"])
+    result = match_transactions(state["ic_transactions"], state["policy"])
     return {
         "clean_pairs": result.clean_pairs,
         "exceptions": result.exceptions,
@@ -129,9 +136,13 @@ def human_review(state: CloseState) -> dict:
     decisions_payload = interrupt({"pending_review": pending})
 
     decisions = [ReviewDecision.model_validate(d) for d in decisions_payload]
+    reviewers = sorted({d.reviewer for d in decisions})
+    received = f"received {len(decisions)} human review decisions"
+    if reviewers:
+        received = f"{received} from {', '.join(reviewers)}"
     return {
         "review_decisions": decisions,
-        "audit_trail": state["audit_trail"] + [f"received {len(decisions)} human review decisions"],
+        "audit_trail": state["audit_trail"] + [received],
     }
 
 
@@ -198,6 +209,17 @@ def finalize(state: CloseState) -> dict:
         if decision is None or decision.action == ReviewAction.REJECT:
             continue  # still pending, or the reviewer decided not to book it
 
+        if same_person(decision.reviewer, state["prepared_by"]):
+            # Preparing the close and approving what it books are separate
+            # duties. Checked here, not only in the dashboard, so no caller of
+            # resume_close can skip it; the item stays unbooked with the
+            # reason in the trail, the same as a bad override amount below.
+            notes.append(
+                f"{ref}: {decision.action.value} by {decision.reviewer}, who prepared this run; "
+                f"not booked, needs a reviewer other than the preparer"
+            )
+            continue
+
         if decision.override_amount is not None and decision.override_amount <= 0:
             # The reviewer's amount is the one human-supplied number that
             # reaches a journal entry, and it's free text from the dashboard.
@@ -213,7 +235,7 @@ def finalize(state: CloseState) -> dict:
             )
             continue
 
-        note = f"human-approved ({decision.action.value})"
+        note = f"human-approved ({decision.action.value}) by {decision.reviewer}"
         if decision.reviewer_note:
             note = f"{note}: {decision.reviewer_note}"
 

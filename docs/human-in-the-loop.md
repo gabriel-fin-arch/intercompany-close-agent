@@ -97,6 +97,25 @@ until it happened to fall below some threshold. Both produce the same
 outcome. Only one of them survives being asked "why 0.15?" in a controls
 review.
 
+## Who prepares, and who decides
+
+Every run records who prepared it, and every decision on the worklist
+records who made it. `finalize` won't book an approval or an edit made by
+the preparer: the item stays unbooked, with the reason in the audit trail,
+and the dashboard won't take the worklist from them in the first place.
+Preparing the close and signing off on what it books are separate duties.
+
+The check sits in `finalize` (`graph/nodes.py`), not only in the dashboard,
+for the same reason the triage policy is re-checked in code: a rule that
+only the page enforces is skipped by the first caller that doesn't use the
+page.
+
+Names are typed in, not authenticated. That makes the run's record say who
+did what, and enforces the rule on that record; it doesn't stop anyone
+typing a colleague's name, which takes the group's own sign-in. Case and
+spacing don't make a different person; initials or a nickname would, and
+text alone can't tell.
+
 ## A word on the confidence numbers
 
 The rule-based path returns fixed confidence bands, not probabilities. A

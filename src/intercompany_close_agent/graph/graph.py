@@ -29,6 +29,7 @@ from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLine
 from intercompany_close_agent.models.review import ReviewAction, ReviewDecision
+from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy
 from intercompany_close_agent.triage.models import TriageClassification, TriageResult
 
 # Every type that can end up inside a checkpoint. Pausing at human_review
@@ -51,6 +52,7 @@ _CHECKPOINTED_TYPES = (
     Elimination,
     JournalLine,
     JournalLineType,
+    ClosePolicy,
 )
 
 
@@ -80,6 +82,9 @@ def run_close(
     trial_balance: list[TrialBalanceLine],
     entities: list[Entity],
     thread_id: str = "close-run",
+    *,
+    prepared_by: str,
+    policy: ClosePolicy = DEFAULT_POLICY,
 ):
     """Start a close run. Returns (compiled_graph, config, result).
 
@@ -87,10 +92,21 @@ def run_close(
     inspect result["__interrupt__"][0].value["pending_review"] for the
     worklist, collect decisions, and call resume_close(...) with the same
     compiled_graph and config to continue.
+
+    prepared_by is whoever is running the close. It goes into the audit
+    trail, and finalize won't book a decision that same person makes on the
+    worklist: preparing the close and approving what it books are separate
+    duties. policy holds the materiality threshold and tolerances; the
+    default is the built-in one.
     """
+    preparer = " ".join(prepared_by.split())
+    if not preparer:
+        raise ValueError("prepared_by is required: a close run records who prepared it")
     compiled = build_graph()
     config = {"configurable": {"thread_id": thread_id}}
     initial_state: CloseState = {
+        "prepared_by": preparer,
+        "policy": policy,
         "entities": entities,
         "trial_balance": trial_balance,
         "ic_transactions": ic_transactions,
@@ -104,6 +120,6 @@ def resume_close(compiled, config, decisions: list[dict]):
     """Resume a paused run with a decision dict per pending reference.
 
     Each decision dict should match ReviewDecision's fields, e.g.
-    {"reference": "...", "action": "approve", "reviewer_note": "..."}.
+    {"reference": "...", "action": "approve", "reviewer": "...", "reviewer_note": "..."}.
     """
     return compiled.invoke(Command(resume=decisions), config=config)
