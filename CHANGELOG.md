@@ -5,6 +5,19 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- A labelled set and an adversarial set for triage, in `evals/triage/`, and
+  a `triage-eval` command that scores the rules or the model on either
+  against the classification the close policy gives. The labelled set has 24
+  cases: all eight exception types in both materiality bands, three touching
+  the manually loaded entity, and the edges of the threshold and the
+  tolerance. The adversarial set has 11, with injection attempts in the
+  reference, the currency code and the memo. Each case keeps what the
+  classifier said and what the close would act on after the taxonomy check.
+  A model run saves every answer with its tokens, cost and latency, and
+  `--estimate` prices one without calling the API. The rules get every case
+  right on both sets; CI runs them and fails if any case changes. The model
+  hasn't been run. `docs/triage-eval.md` has the sets, the results and what
+  they don't measure.
 - The elimination journal as files to import: `journal.csv`, one row per
   journal line, and `journal_d365.csv`, the same entries for the General
   journal data entity of Dynamics 365 Finance, built from Microsoft's
@@ -56,7 +69,19 @@ All notable changes to this project are logged here.
   The dashboard refuses such a reviewer before anything is submitted. Names
   are typed, not authenticated, and `docs/human-in-the-loop.md` says so.
 
+### Changed
+- Triage has a default model, `claude-opus-5-5` (`DEFAULT_MODEL` in
+  `triage/llm.py`), so `ANTHROPIC_API_KEY` alone turns on the model.
+  `ANTHROPIC_MODEL` still names another; before, a key without it ran the
+  rules. Answers are capped at 16,000 tokens, thinking included, where
+  langchain-anthropic would have asked for 128,000.
+
 ### Fixed
+- Triage asked for structured output by forcing a tool call, which Opus 5.5
+  doesn't accept. langchain-anthropic then left the tool optional and warned
+  that an answer without it would fail, and in a close a failed answer falls
+  back to the rules. Triage now uses the API's own structured output
+  (`json_schema`).
 - The README said the audit trail shows what was eliminated and "approved by
   whom", and `docs/human-in-the-loop.md` that the narrative records who
   approved it. Nothing recorded a name. An approved elimination's narrative

@@ -34,6 +34,8 @@ booked.
   generic or for Dynamics 365 Finance, with what each assumes.
 - `docs/scale.md`: the same close on a 60-entity group with 3,005 ledger
   lines, timed.
+- `docs/triage-eval.md`: triage scored on a labelled set and on one built
+  of injection attempts, against the answer the policy gives.
 - How I built this: which decisions are mine and what an AI assistant wrote.
 - The command block below runs the whole close offline; CI is green.
 
@@ -132,10 +134,11 @@ function, there'd be no way to unit test the numbers without also depending
 on a live model call.
 
 **Triage runs against Claude, or a deterministic rule-based fallback, with
-the same output shape either way.** With `ANTHROPIC_API_KEY` and
-`ANTHROPIC_MODEL` set, `triage/llm.py` calls Claude via `langchain-anthropic`
-with structured output. Without them, or if the live call fails for any
-reason (rate limit, network blip, a model that rejects the request),
+the same output shape either way.** With `ANTHROPIC_API_KEY` set,
+`triage/llm.py` calls Claude via `langchain-anthropic` with the API's
+structured output: `claude-opus-5-5`, pinned as `DEFAULT_MODEL`, unless
+`ANTHROPIC_MODEL` names another. Without a key, or if the live call fails
+for any reason (rate limit, network blip, a model that rejects the request),
 `triage/rules.py` takes over: a small, legible set of rules keyed on exception
 type and materiality. A warning names each exception that fell back and why,
 so a broken model configuration can't pass for a working one. Nothing in
@@ -215,6 +218,7 @@ src/intercompany_close_agent/
 app/
   streamlit_app.py   reviewer dashboard
 data/synthetic/      committed sample dataset (regeneratable)
+evals/triage/        labelled and adversarial triage sets, and their saved runs
 docs/                architecture.md, human-in-the-loop.md, data-model.md
 tests/
 ```
@@ -240,8 +244,12 @@ uv run python -m intercompany_close_agent.cli run --data examples/close_template
 uv run python -m intercompany_close_agent.cli scale-run
 
 # same, but with live Claude triage narratives instead of the rule fallback
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY and ANTHROPIC_MODEL
+cp .env.example .env   # then fill in ANTHROPIC_API_KEY
 uv run python -m intercompany_close_agent.cli run
+
+# score triage on the labelled and adversarial sets, offline (see docs/triage-eval.md)
+uv run python -m intercompany_close_agent.cli triage-eval --set labelled
+uv run python -m intercompany_close_agent.cli triage-eval --set adversarial
 
 # review pending exceptions interactively; the reviewer can't be who prepared the run
 uv run streamlit run app/streamlit_app.py

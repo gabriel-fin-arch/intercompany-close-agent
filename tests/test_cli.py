@@ -40,7 +40,7 @@ def test_every_command_prints_its_help():
     """Below typer 0.16, --help goes through a click API that changed in 8.2 and
     dies with a traceback. Nothing else in this file asks for help, so the suite
     stayed green on a floor that could not print a usage line."""
-    for command in ([], ["run"], ["generate-data"]):
+    for command in ([], ["run"], ["generate-data"], ["triage-eval"]):
         result = runner.invoke(app, [*command, "--help"])
 
         assert result.exit_code == 0, result.output

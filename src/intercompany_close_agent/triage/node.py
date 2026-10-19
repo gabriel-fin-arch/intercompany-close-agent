@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 def _llm_is_configured() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY")) and bool(os.environ.get("ANTHROPIC_MODEL"))
+    """An API key is enough: the model defaults to DEFAULT_MODEL in triage/llm.py."""
+    return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
 def _manual_entities(exc: ICException, entities: dict[str, Entity] | None) -> list[str]:
