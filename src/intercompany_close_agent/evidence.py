@@ -12,6 +12,8 @@ project installed:
                     the reviewer's decision, and whether anything was booked
   decisions.csv     every reviewer decision: what, who, when, amount, note
   eliminations.csv  every journal line the close booked
+  journal.csv       the same entries as a journal to import, and
+  journal_d365.csv  laid out for Dynamics 365 Finance (journal.py)
 
 Everything in it is read from the run's own state; nothing is recomputed,
 so the pack can't disagree with what the close did. `docs/controls.md` says
@@ -31,6 +33,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from intercompany_close_agent.ingest.loaders import input_files
+from intercompany_close_agent.journal import d365_csv, generic_csv
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -41,6 +44,8 @@ PACK_FILES = (
     "exceptions.csv",
     "decisions.csv",
     "eliminations.csv",
+    "journal.csv",
+    "journal_d365.csv",
 )
 
 NOTE = (
@@ -202,6 +207,8 @@ def pack_files(state: dict, source: Path, *, generated_at: datetime | None = Non
         "exceptions.csv": exceptions,
         "decisions.csv": decisions_csv,
         "eliminations.csv": eliminations_csv,
+        "journal.csv": generic_csv(state),
+        "journal_d365.csv": d365_csv(state),
     }
 
 

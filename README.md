@@ -30,6 +30,8 @@ booked.
 - `docs/human-in-the-loop.md`: the six exception types that never auto-resolve.
 - `docs/controls.md`: each control, the code that enforces it, the test that
   proves it, and what the evidence pack of a finalized run keeps for it.
+- `docs/journal-export.md`: the entries a close booked, as a journal to import,
+  generic or for Dynamics 365 Finance, with what each assumes.
 - `docs/scale.md`: the same close on a 60-entity group with 3,005 ledger
   lines, timed.
 - How I built this: which decisions are mine and what an AI assistant wrote.

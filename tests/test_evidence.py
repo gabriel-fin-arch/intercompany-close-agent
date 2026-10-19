@@ -193,6 +193,10 @@ def test_a_cli_run_that_finalizes_writes_its_pack(tmp_path: Path, monkeypatch):
     assert f"Evidence pack: {folder}" in result.output
     run = json.loads((folder / "run.json").read_text(encoding="utf-8"))
     assert (run["prepared_by"], run["reviewers"], run["counts"]["eliminations"]) == (PREPARER, [], 1)
+    assert "Journal to import:" in result.output
+    journal = (folder / "journal_d365.csv").read_text(encoding="utf-8").splitlines()
+    assert journal[0].startswith("JOURNALBATCHNUMBER,LINENUMBER")
+    assert len(journal) == 3, "one elimination, two lines"
 
 
 def test_a_run_from_a_workbook_records_the_workbook_as_its_input(final: dict):

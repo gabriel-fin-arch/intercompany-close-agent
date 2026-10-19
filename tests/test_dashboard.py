@@ -178,7 +178,11 @@ def test_a_finalized_close_writes_its_evidence_pack_and_offers_it(dashboard: App
     rows = (folder / "decisions.csv").read_text(encoding="utf-8").splitlines()
     assert len(rows) == count + 1
     assert all(f",reject,{REVIEWER}," in row for row in rows[1:])
-    assert [button.proto.label for button in dashboard.get("download_button")] == ["Download evidence pack"]
+    assert [button.proto.label for button in dashboard.get("download_button")] == [
+        "Download evidence pack",
+        "Download journal (CSV)",
+        "Download journal (Dynamics 365)",
+    ]
 
 
 def test_the_close_runs_from_the_workbook_template(monkeypatch, tmp_path: Path):
