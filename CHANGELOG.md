@@ -18,6 +18,10 @@ All notable changes to this project are logged here.
   edit by the preparer: it stays unbooked with the reason in the audit trail.
   The dashboard refuses such a reviewer before anything is submitted. Names
   are typed, not authenticated, and `docs/human-in-the-loop.md` says so.
+- A "Results on the sample data" block near the top of the README: what an
+  offline run on the committed dataset finds, in three lines.
+  `intercompany_close_agent.sample_results` computes it from a fresh run, and a
+  test fails if the README and the run disagree.
 
 ### Fixed
 - The README said the audit trail shows what was eliminated and "approved by
@@ -31,6 +35,9 @@ All notable changes to this project are logged here.
   decided. Items start with no decision now, the worklist isn't submitted
   until each has one, and `tests/test_dashboard.py` runs the page headless to
   check both.
+- The README and `examples/README.md` didn't say that the control-account
+  break in the sample run is planted, so a first-time reader could take it for
+  a bug. Both say so now, and which entity it is with the default seed.
 - The commit history has its real dates. Every commit's author date is now the
   time it was made, taken from my Claude Code session logs, and no file
   changed. What each publishing rewrite changed in the files is a bridge
