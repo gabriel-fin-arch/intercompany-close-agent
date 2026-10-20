@@ -1,0 +1,17 @@
+# Close policy for intercompany-close-agent.
+#
+# Every value here is the built-in default, so running with this file gives
+# the same close as running without one. Copy it, change what your group
+# uses, and pass it with `run --policy` or the dashboard's policy field. A
+# setting left out keeps its default. The reasoning behind each default is in
+# src/intercompany_close_agent/policy.py and docs/architecture.md.
+
+# A residual, or a balance at risk, at or above this is banded HIGH and goes
+# to a person even when its exception type could be auto-resolved.
+materiality_threshold = 5000.00
+
+# Two legs match when they net to within the larger of these: an absolute
+# floor, and a rate of the larger leg (0.0001 is 0.01%). The control-account
+# tie-out uses the floor.
+amount_tolerance_floor = 1.00
+amount_tolerance_rate = 0.0001

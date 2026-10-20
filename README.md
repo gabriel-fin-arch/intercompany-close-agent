@@ -21,6 +21,18 @@ booked.
 > each commit was made, committer dates are when the history was rebuilt.
 > [PROVENANCE.md](PROVENANCE.md) lists every change and how to check it.
 
+<!-- sample-results:start -->
+**Results on the sample data** (synthetic: 7 entities, 53 intercompany legs;
+the tests rerun the close offline and fail if these figures change):
+
+- 11 pairs match clean, and 18 balances become exceptions, of 8 different
+  types.
+- 16 of the 18 go to a reviewer. The other 2 are amount differences below
+  materiality between interfaced entities, proposed for auto-elimination.
+- 1 of 7 entities fails the control-account tie-out, a break the sample data
+  plants on purpose.
+<!-- sample-results:end -->
+
 ## Review in 5 minutes
 
 - §§1–2: the close problem and why tolerances, interfaced status and control
@@ -28,6 +40,17 @@ booked.
 - §3: the numbers are deterministic Python with tests; the model only triages
   and writes the rationale.
 - `docs/human-in-the-loop.md`: the six exception types that never auto-resolve.
+- `docs/controls.md`: each control, the code that enforces it, the test that
+  proves it, and what the evidence pack of a finalized run keeps for it.
+- `docs/journal-export.md`: the entries a close booked, as a journal to import,
+  generic or for Dynamics 365 Finance, with what each assumes.
+- `docs/scale.md`: the same close on a 60-entity group with 3,005 ledger
+  lines, timed.
+- `docs/triage-eval.md`: triage scored on a labelled set and on one built
+  of injection attempts, against the answer the policy gives. Claude Opus
+  5.5, run once on 20 October 2026 at the API's default effort (35 calls,
+  USD 0.40), got 23 of 24 and 11 of 11; its one miss is a cautious
+  escalation.
 - How I built this: which decisions are mine and what an AI assistant wrote.
 - The command block below runs the whole close offline; CI is green.
 
@@ -126,10 +149,11 @@ function, there'd be no way to unit test the numbers without also depending
 on a live model call.
 
 **Triage runs against Claude, or a deterministic rule-based fallback, with
-the same output shape either way.** With `ANTHROPIC_API_KEY` and
-`ANTHROPIC_MODEL` set, `triage/llm.py` calls Claude via `langchain-anthropic`
-with structured output. Without them, or if the live call fails for any
-reason (rate limit, network blip, a model that rejects the request),
+the same output shape either way.** With `ANTHROPIC_API_KEY` set,
+`triage/llm.py` calls Claude via `langchain-anthropic` with the API's
+structured output: `claude-opus-5-5`, pinned as `DEFAULT_MODEL`, unless
+`ANTHROPIC_MODEL` names another. Without a key, or if the live call fails
+for any reason (rate limit, network blip, a model that rejects the request),
 `triage/rules.py` takes over: a small, legible set of rules keyed on exception
 type and materiality. A warning names each exception that fell back and why,
 so a broken model configuration can't pass for a working one. Nothing in
@@ -209,6 +233,7 @@ src/intercompany_close_agent/
 app/
   streamlit_app.py   reviewer dashboard
 data/synthetic/      committed sample dataset (regeneratable)
+evals/triage/        labelled and adversarial triage sets, and their saved runs
 docs/                architecture.md, human-in-the-loop.md, data-model.md
 tests/
 ```
@@ -224,15 +249,32 @@ uv run python -m intercompany_close_agent.cli generate-data
 # run the close pipeline end to end, offline
 uv run python -m intercompany_close_agent.cli run
 
+# same, with your group's materiality and tolerances (this file has the defaults)
+uv run python -m intercompany_close_agent.cli run --policy examples/policy.toml
+
+# same, from one Excel workbook instead of three CSVs (this one holds the sample)
+uv run python -m intercompany_close_agent.cli run --data examples/close_template.xlsx
+
+# a 60-entity group, generated, closed offline and timed (see docs/scale.md)
+uv run python -m intercompany_close_agent.cli scale-run
+
 # same, but with live Claude triage narratives instead of the rule fallback
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY and ANTHROPIC_MODEL
+cp .env.example .env   # then fill in ANTHROPIC_API_KEY
 uv run python -m intercompany_close_agent.cli run
 
-# review pending exceptions interactively
+# score triage on the labelled and adversarial sets, offline (see docs/triage-eval.md)
+uv run python -m intercompany_close_agent.cli triage-eval --set labelled
+uv run python -m intercompany_close_agent.cli triage-eval --set adversarial
+
+# review pending exceptions interactively; the reviewer can't be who prepared the run
 uv run streamlit run app/streamlit_app.py
 
 # run the test suite
 uv run pytest
+
+# install the git hooks once: ruff, whitespace and file checks, and a refusal
+# to commit a .env or an API key; CI runs the same hooks on every file
+uv run pre-commit install
 ```
 
 Or without Python or uv, with Docker: the image runs the same offline close
@@ -242,6 +284,13 @@ on the committed sample, and the dashboard on request (see the `Dockerfile`).
 docker build -t intercompany-close-agent .
 docker run --rm intercompany-close-agent
 ```
+
+The sample run is meant to find problems, and the first one it reports is
+deliberate: one entity's intercompany subledger doesn't tie to its trial
+balance (`US01` with the default seed). The generator plants a posting that
+reached the GL but never the subledger, the everyday reason a control account
+won't tie at close, and the tie-out step catches it before anything is
+matched or eliminated.
 
 ## What's out of scope (for now)
 

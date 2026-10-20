@@ -20,8 +20,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Lint
-        run: uv run ruff check .
+      # ruff and the rest of .pre-commit-config.yaml, on every file, so the
+      # hooks a contributor runs and the checks CI runs are the same list.
+      - name: Lint and pre-commit hooks
+        run: uv run pre-commit run --all-files --show-diff-on-failure
 
       - name: Test
         run: uv run pytest -q
@@ -30,6 +32,15 @@ jobs:
         run: |
           uv run python -m intercompany_close_agent.cli generate-data
           uv run python -m intercompany_close_agent.cli run
+
+      - name: Score triage offline on the labelled and adversarial sets
+        # The rules and the taxonomy check, with no API key. Exits 1 if any
+        # case gets a classification other than the one its set expects. The
+        # test step above also runs the taxonomy check alone on both sets,
+        # behind a classifier that answers auto_resolvable to everything.
+        run: |
+          uv run python -m intercompany_close_agent.cli triage-eval --set labelled
+          uv run python -m intercompany_close_agent.cli triage-eval --set adversarial
 
   container:
     # The image a reviewer can run without Python or uv: built from this

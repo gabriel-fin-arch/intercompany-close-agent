@@ -1,0 +1,41 @@
+# The checks CI runs, before a commit is made. Install once with
+#   uv run pre-commit install
+# and they run on every `git commit`; `uv run pre-commit run --all-files`
+# runs them on the whole repo, which is what CI does.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      # The project's own ruff, at the version uv installed, so the hook and
+      # `uv run ruff check .` can't disagree. `unsupported` is what pre-commit
+      # 4.4 renamed `system` to, hence the floor in pyproject.
+      - id: ruff
+        name: ruff
+        entry: uv run ruff check --force-exclude
+        language: unsupported
+        types: [python]
+
+      # A key committed once is in the history for good. These two refuse it
+      # before it gets there: any file named .env, and any file with
+      # something shaped like an Anthropic API key in it.
+      - id: no-env-file
+        name: no .env files
+        entry: .env holds secrets and stays out of git; .env.example is the template
+        language: fail
+        files: (^|/)\.env(\..+)?$
+        exclude: (^|/)\.env\.example$
+
+      - id: no-anthropic-key
+        name: no Anthropic API keys
+        entry: sk-ant-[A-Za-z0-9_-]{20,}
+        language: pygrep
+        types: [text]

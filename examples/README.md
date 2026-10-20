@@ -3,7 +3,7 @@
 **`sample_cli_run.txt`** -- real output from:
 
 ```
-uv run python -m intercompany_close_agent.cli run
+uv run python -m intercompany_close_agent.cli run --prepared-by "example preparer"
 ```
 
 against the committed `data/synthetic/` dataset, offline (no
@@ -19,6 +19,13 @@ generated with seed `14` specifically because it's one of the few seeds
 (out of the first 50 tried) that happens to exercise every type in a
 single run; see `src/intercompany_close_agent/synthetic/generator.py`'s
 `generate()` for why that seed and not the more obvious `42`.
+
+The run opens with a control-account tie-out break: `US01`'s intercompany
+subledger is -48894.96 against -46358.95 on its trial balance. That's planted.
+`build_trial_balance_rows()` in the generator adds a posting to one entity's GL
+that never reached its subledger, which is the everyday reason a control
+account won't tie at close, and the tie-out step reports it before anything is
+matched. Which entity it lands on depends on the seed.
 
 Several entries also carry a note that one of the entities involved keys
 its data in by hand -- that's `ZA01`, the group's non-interfaced entity,
@@ -36,6 +43,18 @@ interfaced entities load straight from the ERP and don't re-key anything.
 The matching engine doesn't fuzzy-match references back together on purpose
 -- see `docs/human-in-the-loop.md` for why.
 
+**`close_template.xlsx`** -- the committed sample as one workbook, with
+the three tables as sheets (entities, trial_balance, ic_ledger) and the
+same columns as the CSVs. It's the template for a close team's own data:
+`run --data close_template.xlsx`, or the dashboard's data field, reads it
+through the same checks as the CSVs, and errors name the sheet and row.
+`write-workbook` makes it from a folder of CSVs; a test checks that it
+holds exactly the sample.
+
+**`policy.toml`** -- a close policy with the built-in defaults spelled out:
+the materiality threshold and the matching tolerance. Copy it, change it,
+and pass it with `run --policy` or the dashboard's **Policy file** field.
+
 ## Dashboard
 
 A screenshot is in the README (`docs/img/dashboard.png`); run it yourself
@@ -45,6 +64,11 @@ for the interactive version:
 uv run streamlit run app/streamlit_app.py
 ```
 
-Click **Run close pipeline** against the default data directory, and the
-same worklist from `sample_cli_run.txt` renders as an interactive review
-screen with approve/reject/edit per item.
+Enter who is preparing the close under **Prepared by** and click **Run
+close pipeline** against the default data directory, and the same worklist
+from `sample_cli_run.txt` renders as an interactive review screen with
+approve/reject/edit per item. Every item needs a decision, and the
+**Reviewer** who submits them has to be someone other than the preparer.
+Once the close is finalized, the page writes its evidence pack to a new
+folder under `evidence/` and offers it as a zip; `docs/controls.md` says
+what each file in it is evidence of.

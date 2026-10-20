@@ -5,15 +5,15 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-from intercompany_close_agent.matching.engine import (
-    AMOUNT_TOLERANCE_FLOOR,
-    AMOUNT_TOLERANCE_RATE,
-    MATERIALITY_THRESHOLD,
-    amount_tolerance_for,
-    match_transactions,
-)
+from intercompany_close_agent.matching.engine import match_transactions
 from intercompany_close_agent.models.exception import ExceptionType, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
+from intercompany_close_agent.policy import (
+    AMOUNT_TOLERANCE_FLOOR,
+    AMOUNT_TOLERANCE_RATE,
+    DEFAULT_POLICY,
+    MATERIALITY_THRESHOLD,
+)
 
 
 def _leg(
@@ -63,8 +63,8 @@ def test_rounding_within_tolerance_is_a_clean_match():
 
 def test_tolerance_scales_with_the_size_of_the_balance():
     """A flat tolerance would treat a small balance and a large one alike."""
-    assert amount_tolerance_for(Decimal("500.00")) == AMOUNT_TOLERANCE_FLOOR  # floor applies
-    assert amount_tolerance_for(Decimal("1000000.00")) == Decimal("1000000.00") * AMOUNT_TOLERANCE_RATE
+    assert DEFAULT_POLICY.amount_tolerance_for(Decimal("500.00")) == AMOUNT_TOLERANCE_FLOOR  # floor applies
+    assert DEFAULT_POLICY.amount_tolerance_for(Decimal("1000000.00")) == Decimal("1000000.00") * AMOUNT_TOLERANCE_RATE
 
     # a 50-dollar break on a 500-dollar balance is a real difference
     small = [

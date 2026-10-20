@@ -13,31 +13,10 @@ from decimal import Decimal
 
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
+from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy
 
-# Matching tolerance. Two components, because a flat absolute number treats a
-# USD 500 balance and a USD 250,000 one as if they carried the same risk:
-#
-#   floor  -- sub-unit differences are arithmetic noise at any size. USD 1.00.
-#   rate   -- 0.01% of the larger leg, so tolerance scales with the balance.
-#
-# The effective tolerance is whichever is larger. Sized so genuine FX drift
-# still fails: converting the same balance at two rates typically moves it by
-# tenths of a percent upward, an order of magnitude past 0.01%.
-AMOUNT_TOLERANCE_FLOOR = Decimal("1.00")
-AMOUNT_TOLERANCE_RATE = Decimal("0.0001")
-
-# Above this residual an exception is banded HIGH, below it LOW. This is an
-# *operational* threshold, not a statutory one, and deliberately much tighter
-# than audit materiality would be for a group this size: an intercompany break
-# is a signal that a process failed somewhere, and a controller wants to see
-# that well before it becomes a misstatement risk. The banding is only an
-# input to triage -- it decides nothing on its own.
-MATERIALITY_THRESHOLD = Decimal("5000.00")
-
-
-def amount_tolerance_for(amount: Decimal) -> Decimal:
-    """Tolerance applicable to a balance of this size."""
-    return max(AMOUNT_TOLERANCE_FLOOR, abs(amount) * AMOUNT_TOLERANCE_RATE)
+# The tolerance and the materiality threshold are the close policy's
+# (policy.py), with the reasoning behind their defaults.
 
 
 class MatchResult:
@@ -56,8 +35,8 @@ class MatchResult:
         return counts
 
 
-def _materiality_for(amount: Decimal) -> Materiality:
-    return Materiality.HIGH if abs(amount) >= MATERIALITY_THRESHOLD else Materiality.LOW
+def _materiality_for(policy: ClosePolicy, amount: Decimal) -> Materiality:
+    return Materiality.HIGH if abs(amount) >= policy.materiality_threshold else Materiality.LOW
 
 
 def _counterparties_consistent(a: ICTransaction, b: ICTransaction) -> bool:
@@ -80,7 +59,7 @@ def _period_label(leg: ICTransaction) -> str:
     return leg.transaction_date.strftime("%Y-%m")
 
 
-def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
+def match_transactions(transactions: list[ICTransaction], policy: ClosePolicy = DEFAULT_POLICY) -> MatchResult:
     """Pair up IC transaction legs by reference and flag whatever's left over.
 
     Handles the simplest case first: a reference with exactly one leg means
@@ -108,7 +87,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.SELF_DEALING,
                     legs=legs,
                     net_amount=net,
-                    materiality=_materiality_for(max(abs(leg.amount) for leg in legs)),
+                    materiality=_materiality_for(policy, max(abs(leg.amount) for leg in legs)),
                     detected_reason=(
                         f"{reference}: {self_dealt[0].entity_code} is booked as its own "
                         f"counterparty, which points at a mapping error rather than a real "
@@ -126,7 +105,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.MISSING_COUNTERPARTY,
                     legs=legs,
                     net_amount=leg.amount,
-                    materiality=_materiality_for(leg.amount),
+                    materiality=_materiality_for(policy, leg.amount),
                     detected_reason=(
                         f"{leg.entity_code} booked {reference} against {leg.counterparty_code}, "
                         f"but no mirror leg was found under this reference."
@@ -143,7 +122,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.DUPLICATE_REFERENCE,
                     legs=legs,
                     net_amount=net,
-                    materiality=_materiality_for(net),
+                    materiality=_materiality_for(policy, net),
                     detected_reason=f"{len(legs)} legs share reference {reference}; expected exactly 2.",
                 )
             )
@@ -159,7 +138,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.COUNTERPARTY_MISMATCH,
                     legs=legs,
                     net_amount=net,
-                    materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
+                    materiality=_materiality_for(policy, max(abs(leg_a.amount), abs(leg_b.amount))),
                     detected_reason=(
                         f"{leg_a.entity_code} booked {reference} against {leg_a.counterparty_code}, but "
                         f"{leg_b.entity_code} booked it against {leg_b.counterparty_code} instead of "
@@ -183,7 +162,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.CURRENCY_MISMATCH,
                     legs=legs,
                     net_amount=None,
-                    materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
+                    materiality=_materiality_for(policy, max(abs(leg_a.amount), abs(leg_b.amount))),
                     detected_reason=(
                         f"{reference}: {leg_a.entity_code} booked {leg_a.currency} and "
                         f"{leg_b.entity_code} booked {leg_b.currency}; the two legs cannot be "
@@ -207,7 +186,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.SIGN_MISMATCH,
                     legs=legs,
                     net_amount=leg_a.amount + leg_b.amount,
-                    materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
+                    materiality=_materiality_for(policy, max(abs(leg_a.amount), abs(leg_b.amount))),
                     detected_reason=(
                         f"{reference}: {leg_a.entity_code} and {leg_b.entity_code} both booked "
                         f"this as a {side}; a real balance has one of each, and the ledger "
@@ -218,7 +197,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
             continue
 
         net = leg_a.amount + leg_b.amount
-        tolerance = amount_tolerance_for(max(abs(leg_a.amount), abs(leg_b.amount)))
+        tolerance = policy.amount_tolerance_for(max(abs(leg_a.amount), abs(leg_b.amount)))
         if abs(net) > tolerance:
             exceptions.append(
                 ICException(
@@ -226,7 +205,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.AMOUNT_MISMATCH,
                     legs=legs,
                     net_amount=net,
-                    materiality=_materiality_for(net),
+                    materiality=_materiality_for(policy, net),
                     detected_reason=(
                         f"{reference}: legs net to {net} instead of zero "
                         f"(tolerance for a balance this size is {tolerance})."
@@ -242,7 +221,7 @@ def match_transactions(transactions: list[ICTransaction]) -> MatchResult:
                     exception_type=ExceptionType.TIMING_GAP,
                     legs=legs,
                     net_amount=net,
-                    materiality=_materiality_for(max(abs(leg_a.amount), abs(leg_b.amount))),
+                    materiality=_materiality_for(policy, max(abs(leg_a.amount), abs(leg_b.amount))),
                     detected_reason=(
                         f"{reference}: {leg_a.entity_code} booked in "
                         f"{_period_label(leg_a)} but {leg_b.entity_code} booked in "
