@@ -1,6 +1,6 @@
 [project]
 name = "intercompany-close-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Agent-first assistant for the intercompany leg of a multi-entity consolidation close."
 readme = "README.md"
 requires-python = ">=3.11"
