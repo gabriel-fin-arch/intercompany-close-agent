@@ -291,3 +291,34 @@ def test_the_doc_states_what_the_estimate_prints():
         rules_run = evaluate(case_set, rules_classifier, "rules")
         total = len(rules_run.cases)
         assert f"| {name} ({total}) | rules | {rules_run.passed} | {rules_run.raw_agreed} | 0 | 0 |" in doc
+
+
+@pytest.mark.parametrize("name", SET_NAMES)
+def test_the_saved_model_run_is_what_the_doc_reports(name: str):
+    """The 20 October run of Claude Opus 5.5: still the set it was run on, every
+    call costed, never auto-resolved against the policy, and the doc's tables
+    are its numbers."""
+    run = EvalRun.model_validate_json(
+        results_path(name, "model", "claude-opus-5-5", SETS_DIR).read_text(encoding="utf-8")
+    )
+    case_set = _set(name)
+    doc = (ROOT / "docs" / "triage-eval.md").read_text(encoding="utf-8")
+    calls = run.calls()
+
+    assert [(case.id, case.expected) for case in run.cases] == [(case.id, case.expected) for case in case_set.cases]
+    assert len(calls) == len(run.cases) and all(call.cost_usd is not None for call in calls)
+    assert not run.unsafe
+    overridden = sum(case.overridden for case in run.cases)
+    results_row = (
+        f"| {name} ({len(run.cases)}) | Claude Opus 5.5 | {run.passed} | {run.raw_agreed} | {overridden} | 0 |"
+    )
+    assert results_row in doc, results_row
+    tokens_in = sum(c.input_tokens + c.cache_read_input_tokens + c.cache_creation_input_tokens for c in calls)
+    tokens_out = sum(call.output_tokens for call in calls)
+    seconds = sum(call.seconds for call in calls)
+    longest = max(call.seconds for call in calls)
+    row = (
+        f"| {name} | {len(calls)} | {tokens_in:,} | {tokens_out:,} | {run.cost_usd():.2f} | {seconds:.1f} | "
+        f"{longest:.1f} s |"
+    )
+    assert row in doc, row

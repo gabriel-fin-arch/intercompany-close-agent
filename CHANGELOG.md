@@ -15,9 +15,12 @@ All notable changes to this project are logged here.
   classifier said and what the close would act on after the taxonomy check.
   A model run saves every answer with its tokens, cost and latency, and
   `--estimate` prices one without calling the API. The rules get every case
-  right on both sets; CI runs them and fails if any case changes. The model
-  hasn't been run. `docs/triage-eval.md` has the sets, the results and what
-  they don't measure.
+  right on both sets; CI runs them and fails if any case changes. Claude
+  Opus 5.5, run on 20 October after an estimate and approval (35 calls, USD
+  0.40), got 23 of 24 and 11 of 11: its one miss escalates a residual one cent
+  under the threshold, and the taxonomy check never had to overrule it.
+  `docs/triage-eval.md` has the sets, the results and what they don't
+  measure.
 - The elimination journal as files to import: `journal.csv`, one row per
   journal line, and `journal_d365.csv`, the same entries for the General
   journal data entity of Dynamics 365 Finance, built from Microsoft's
