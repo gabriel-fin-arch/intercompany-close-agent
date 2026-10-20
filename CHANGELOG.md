@@ -4,6 +4,14 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+### Added
+- pre-commit: ruff, whitespace, end-of-file, YAML, TOML, merge-conflict and
+  large-file checks, and two that refuse a commit holding a `.env` or
+  anything shaped like an Anthropic API key. ruff runs at the project's own
+  version through uv. CI's lint step is now `pre-commit run --all-files`, so
+  the hooks and CI check the same things; `uv run pre-commit install` sets
+  them up. Needs pre-commit 4.4 or later.
+
 ### Fixed
 - The commit history has its real dates. Every commit's author date is now the
   time it was made, taken from my Claude Code session logs, and no file

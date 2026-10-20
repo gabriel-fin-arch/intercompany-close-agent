@@ -20,8 +20,10 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Lint
-        run: uv run ruff check .
+      # ruff and the rest of .pre-commit-config.yaml, on every file, so the
+      # hooks a contributor runs and the checks CI runs are the same list.
+      - name: Lint and pre-commit hooks
+        run: uv run pre-commit run --all-files --show-diff-on-failure
 
       - name: Test
         run: uv run pytest -q
