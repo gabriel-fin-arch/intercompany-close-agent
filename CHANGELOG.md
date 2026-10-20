@@ -4,6 +4,8 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-20
+
 ### Added
 - A `Dockerfile` that runs the offline close on the committed sample with one
   command, and the dashboard from the same image on a published port. Runtime
