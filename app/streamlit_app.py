@@ -128,6 +128,13 @@ def _render_evidence() -> None:
     st.download_button(
         "Download evidence pack", data=zip_pack(folder), file_name=f"{folder.name}.zip", mime="application/zip"
     )
+    st.caption(
+        "The entries booked, as a journal to import: one CSV row per line, or laid out for the Dynamics 365 "
+        "Finance General journal entity. docs/journal-export.md says what each assumes."
+    )
+    journals = (("Download journal (CSV)", "journal.csv"), ("Download journal (Dynamics 365)", "journal_d365.csv"))
+    for label, name in journals:
+        st.download_button(label, data=(folder / name).read_bytes(), file_name=f"{folder.name}-{name}", mime="text/csv")
 
 
 def _render_eliminations(eliminations) -> None:

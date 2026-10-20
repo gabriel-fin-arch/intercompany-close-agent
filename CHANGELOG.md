@@ -5,6 +5,18 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- The elimination journal as files to import: `journal.csv`, one row per
+  journal line, and `journal_d365.csv`, the same entries for the General
+  journal data entity of Dynamics 365 Finance, built from Microsoft's
+  published description of it. Both are in every evidence pack, `run` names
+  them when a close finalizes, and the dashboard offers them as downloads.
+  They hold what the close booked and nothing it didn't. The posting date is
+  the end of the month the close is for, not the month of its latest line,
+  which a timing gap pushes past the cutoff. `docs/journal-export.md` gives
+  the columns, what the Dynamics 365 file assumes (one elimination legal
+  entity, the entity as a dimension, a main-account mapping, an existing
+  journal name) and why there is no Lucanet file. Neither has been imported
+  into a live system.
 - The inputs can be one Excel workbook instead of three CSVs: sheets named
   entities, trial_balance and ic_ledger, with the same columns, read through
   the same checks, with errors that name the sheet and row. A whole amount

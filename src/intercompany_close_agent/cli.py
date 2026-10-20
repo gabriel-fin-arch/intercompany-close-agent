@@ -147,7 +147,9 @@ def run(
         n_eliminations = len(result.get("eliminations", []))
         typer.echo("")
         typer.echo(f"No items needed human review. {n_eliminations} elimination(s) finalized.")
-        typer.echo(f"Evidence pack: {write_pack(result, evidence_dir, data_dir)}")
+        pack = write_pack(result, evidence_dir, data_dir)
+        typer.echo(f"Evidence pack: {pack}")
+        typer.echo(f"Journal to import: {pack / 'journal.csv'}, and for Dynamics 365 {pack / 'journal_d365.csv'}")
 
 
 def _login_name() -> str:
