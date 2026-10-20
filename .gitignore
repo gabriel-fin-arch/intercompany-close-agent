@@ -27,6 +27,9 @@ chat_history_*.md
 # streamlit
 .streamlit/secrets.toml
 
+# evidence packs written by local runs
+evidence/
+
 # editor / OS
 .vscode/
 .idea/

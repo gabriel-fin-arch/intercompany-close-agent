@@ -53,6 +53,30 @@ ENTITIES: list[Entity] = [
     Entity(code="ZA01", name="Vireon South Africa Pty Ltd", region="AFRICA", local_currency="ZAR", interfaced=False),
 ]
 
+# A larger group keeps the seven entities above, and so the sample's one
+# manually loaded entity, ZA01, and adds interfaced ones from these countries
+# in turn: FR01, NL01, ... then FR02, NL02, and so on. Invented like the rest.
+EXTRA_COUNTRIES: list[tuple[str, str, str, str]] = [
+    ("FR", "France", "EMEA", "EUR"),
+    ("NL", "Netherlands", "EMEA", "EUR"),
+    ("IT", "Italy", "EMEA", "EUR"),
+    ("ES", "Spain", "EMEA", "EUR"),
+    ("CH", "Switzerland", "EMEA", "CHF"),
+    ("SE", "Sweden", "EMEA", "SEK"),
+    ("PL", "Poland", "EMEA", "PLN"),
+    ("JP", "Japan", "APAC", "JPY"),
+    ("CN", "China", "APAC", "CNY"),
+    ("IN", "India", "APAC", "INR"),
+    ("AU", "Australia", "APAC", "AUD"),
+    ("SG", "Singapore", "APAC", "SGD"),
+    ("KR", "Korea", "APAC", "KRW"),
+    ("CA", "Canada", "US", "CAD"),
+    ("AR", "Argentina", "LATAM", "ARS"),
+    ("CL", "Chile", "LATAM", "CLP"),
+    ("CO", "Colombia", "LATAM", "COP"),
+    ("NG", "Nigeria", "AFRICA", "NGN"),
+]
+
 REFERENCE_PREFIXES = ["MGMT-FEE", "PRODUCT", "ROYALTY", "LOAN-INT", "RECHARGE"]
 
 CLOSE_DATE = date(2025, 9, 30)
@@ -68,6 +92,26 @@ TB_ACCOUNTS = [
 ]
 
 
+def entities_for(count: int) -> list[Entity]:
+    """The group's legal entities: the seven of the sample, then more up to count."""
+    if count < len(ENTITIES):
+        raise ValueError(f"a group needs at least the sample's {len(ENTITIES)} entities, not {count}")
+    extra: list[Entity] = []
+    for i in range(count - len(ENTITIES)):
+        country, country_name, region, currency = EXTRA_COUNTRIES[i % len(EXTRA_COUNTRIES)]
+        number = 1 + i // len(EXTRA_COUNTRIES)
+        extra.append(
+            Entity(
+                code=f"{country}{number:02d}",
+                name=f"Vireon {country_name} {number:02d}",
+                region=region,
+                local_currency=currency,
+                interfaced=True,
+            )
+        )
+    return [*ENTITIES, *extra]
+
+
 @dataclass
 class ICPair:
     """The two legs of one clean intercompany balance, before any anomaly."""
@@ -80,9 +124,9 @@ class ICPair:
     description: str
 
 
-def generate_ic_pairs(rng: random.Random, count: int) -> list[ICPair]:
+def generate_ic_pairs(rng: random.Random, count: int, entities: list[Entity] = ENTITIES) -> list[ICPair]:
     pairs: list[ICPair] = []
-    codes = [e.code for e in ENTITIES]
+    codes = [e.code for e in entities]
     for i in range(count):
         entity_code, counterparty_code = rng.sample(codes, 2)
         prefix = rng.choice(REFERENCE_PREFIXES)
@@ -284,7 +328,9 @@ def build_ic_ledger_rows(pairs: list[ICPair], rng: random.Random, anomaly_rate: 
     return rows
 
 
-def build_trial_balance_rows(rng: random.Random, ic_rows: list[dict]) -> list[dict]:
+def build_trial_balance_rows(
+    rng: random.Random, ic_rows: list[dict], entities: list[Entity] = ENTITIES
+) -> list[dict]:
     """Build the trial balance, with the IC control accounts derived from the ledger.
 
     The intercompany receivable and payable accounts aren't random: in a real
@@ -295,8 +341,8 @@ def build_trial_balance_rows(rng: random.Random, ic_rows: list[dict]) -> list[di
     One entity is then deliberately knocked out of balance, because a tie-out
     check that can never fail isn't a check.
     """
-    ic_receivable: dict[str, Decimal] = {e.code: Decimal("0") for e in ENTITIES}
-    ic_payable: dict[str, Decimal] = {e.code: Decimal("0") for e in ENTITIES}
+    ic_receivable: dict[str, Decimal] = {e.code: Decimal("0") for e in entities}
+    ic_payable: dict[str, Decimal] = {e.code: Decimal("0") for e in entities}
 
     for row in ic_rows:
         amount = Decimal(row["amount"])
@@ -305,11 +351,11 @@ def build_trial_balance_rows(rng: random.Random, ic_rows: list[dict]) -> list[di
 
     # A posting that reached the GL but never made it into the IC subledger --
     # the everyday cause of a control account that won't tie at close.
-    broken_entity = rng.choice([e.code for e in ENTITIES])
+    broken_entity = rng.choice([e.code for e in entities])
     ic_receivable[broken_entity] += (Decimal(rng.randrange(100_000, 900_000)) / 100).quantize(Decimal("1.00"))
 
     rows: list[dict] = []
-    for entity in ENTITIES:
+    for entity in entities:
         for account_code, account_name in TB_ACCOUNTS:
             if account_code == "1000-IC-REC":
                 balance = ic_receivable[entity.code]
@@ -340,17 +386,27 @@ def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
         writer.writerows(rows)
 
 
-def generate(seed: int = 14, pair_count: int = 26, out_dir: Path = OUTPUT_DIR) -> None:
+def generate(
+    seed: int = 14,
+    pair_count: int = 26,
+    out_dir: Path = OUTPUT_DIR,
+    entity_count: int = len(ENTITIES),
+    anomaly_rate: float = 0.35,
+) -> None:
     # 14 isn't special to the generator -- it's just the seed (out of the
     # first 50 tried) whose random draw happens to exercise all eight
     # exception types in one committed dataset, missing_counterparty through
     # duplicate_reference, instead of leaving some of them to only ever show
     # up in tests/test_matching.py's hand-built fixtures.
+    #
+    # entity_count and anomaly_rate are for larger runs (see `scale-run`); at
+    # their defaults the draw, and so the committed sample, is unchanged.
     rng = random.Random(seed)
+    entities = entities_for(entity_count)
 
-    ic_pairs = generate_ic_pairs(rng, pair_count)
-    ic_rows = build_ic_ledger_rows(ic_pairs, rng)
-    tb_rows = build_trial_balance_rows(rng, ic_rows)
+    ic_pairs = generate_ic_pairs(rng, pair_count, entities)
+    ic_rows = build_ic_ledger_rows(ic_pairs, rng, anomaly_rate)
+    tb_rows = build_trial_balance_rows(rng, ic_rows, entities)
 
     _write_csv(
         out_dir / "ic_ledger.csv",
@@ -372,10 +428,10 @@ def generate(seed: int = 14, pair_count: int = 26, out_dir: Path = OUTPUT_DIR) -
     )
     _write_csv(
         out_dir / "entities.csv",
-        [e.model_dump() for e in ENTITIES],
+        [e.model_dump() for e in entities],
         fieldnames=["code", "name", "region", "local_currency", "reporting_currency", "interfaced"],
     )
 
     print(f"wrote {len(ic_rows)} IC ledger rows from {len(ic_pairs)} pairs -> {out_dir / 'ic_ledger.csv'}")
-    print(f"wrote {len(tb_rows)} trial balance rows across {len(ENTITIES)} entities -> {out_dir / 'trial_balance.csv'}")
-    print(f"wrote {len(ENTITIES)} entities -> {out_dir / 'entities.csv'}")
+    print(f"wrote {len(tb_rows)} trial balance rows across {len(entities)} entities -> {out_dir / 'trial_balance.csv'}")
+    print(f"wrote {len(entities)} entities -> {out_dir / 'entities.csv'}")

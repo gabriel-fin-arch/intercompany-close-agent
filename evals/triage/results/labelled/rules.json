@@ -1,0 +1,369 @@
+{
+  "set_name": "labelled",
+  "triage": "rules",
+  "model": null,
+  "run_at": "2026-10-19T12:22:38+00:00",
+  "prices_as_of": null,
+  "cases": [
+    {
+      "id": "amount-low",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.7,
+        "rationale": "RECHARGE-2025-3001: legs net to 300.00 instead of zero (tolerance for a balance this size is 1.200000). The residual is below the group materiality threshold and both sides load through a system interface, so it's proposed for auto-elimination rather than escalation."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "amount-high",
+      "exception_type": "amount_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.8,
+        "rationale": "MGMT-FEE-2025-3002: legs net to 12000.00 instead of zero (tolerance for a balance this size is 25.000000). The residual is material, so this needs sign-off before eliminating."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "amount-low-manual",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "RECHARGE-2025-3003: legs net to 400.00 instead of zero (tolerance for a balance this size is 1.00). Not auto-eliminated regardless of size: ZA01 keys data in by hand rather than loading through a system interface."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "amount-at-threshold",
+      "exception_type": "amount_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.8,
+        "rationale": "SUPPLY-2025-3004: legs net to 5000.00 instead of zero (tolerance for a balance this size is 10.500000). The residual is material, so this needs sign-off before eliminating."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "amount-below-threshold",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.7,
+        "rationale": "SUPPLY-2025-3005: legs net to 4999.99 instead of zero (tolerance for a balance this size is 10.499999). The residual is below the group materiality threshold and both sides load through a system interface, so it's proposed for auto-elimination rather than escalation."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "amount-payable-larger",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.7,
+        "rationale": "ROYALTY-2025-3006: legs net to -1250.00 instead of zero (tolerance for a balance this size is 4.125000). The residual is below the group materiality threshold and both sides load through a system interface, so it's proposed for auto-elimination rather than escalation."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "amount-just-outside-tolerance",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.7,
+        "rationale": "LOAN-INT-2025-3007: legs net to 5.01 instead of zero (tolerance for a balance this size is 5.000000). The residual is below the group materiality threshold and both sides load through a system interface, so it's proposed for auto-elimination rather than escalation."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "timing-low",
+      "exception_type": "timing_gap",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.7,
+        "rationale": "SVC-2025-3008: GB01 booked in 2025-09 but IE01 booked in 2025-10; the balance straddles the close cutoff. The balance straddling the cutoff is below the group materiality threshold and both sides load through a system interface, so it's proposed for auto-elimination rather than escalation."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "timing-high",
+      "exception_type": "timing_gap",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.8,
+        "rationale": "SVC-2025-3009: US01 booked in 2025-09 but MX01 booked in 2025-10; the balance straddles the close cutoff. The balance straddling the cutoff is material, so this needs sign-off before eliminating."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "timing-low-manual",
+      "exception_type": "timing_gap",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "SVC-2025-3010: ZA01 booked in 2025-10 but GB01 booked in 2025-09; the balance straddles the close cutoff. Not auto-eliminated regardless of size: ZA01 keys data in by hand rather than loading through a system interface."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "missing-low",
+      "exception_type": "missing_counterparty",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "missing counterparty exceptions are never auto-resolved by the rule fallback: DE01 booked RECHARGE-2025-3011 against GB01, but no mirror leg was found under this reference."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "missing-high",
+      "exception_type": "missing_counterparty",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "missing counterparty exceptions are never auto-resolved by the rule fallback: US01 booked LOAN-2025-3012 against BR01, but no mirror leg was found under this reference."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "missing-manual-side",
+      "exception_type": "missing_counterparty",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "missing counterparty exceptions are never auto-resolved by the rule fallback: US01 booked MGMT-FEE-2025-3013 against ZA01, but no mirror leg was found under this reference. Worth checking the manual load first -- ZA01 keys its data in by hand."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "counterparty-low",
+      "exception_type": "counterparty_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "counterparty mismatch exceptions are never auto-resolved by the rule fallback: US01 booked RECHARGE-2025-3014 against DE01, but DE01 booked it against GB01 instead of US01."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "counterparty-high",
+      "exception_type": "counterparty_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "counterparty mismatch exceptions are never auto-resolved by the rule fallback: GB01 booked SUPPLY-2025-3015 against IE01, but IE01 booked it against DE01 instead of GB01."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "sign-low",
+      "exception_type": "sign_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "sign mismatch exceptions are never auto-resolved by the rule fallback: ROYALTY-2025-3016: BR01 and MX01 both booked this as a receivable; a real balance has one of each, and the ledger doesn't say which side has the sign backwards."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "sign-high",
+      "exception_type": "sign_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "sign mismatch exceptions are never auto-resolved by the rule fallback: SUPPLY-2025-3017: DE01 and IE01 both booked this as a payable; a real balance has one of each, and the ledger doesn't say which side has the sign backwards."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "currency-low",
+      "exception_type": "currency_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "currency mismatch exceptions are never auto-resolved by the rule fallback: SVC-2025-3018: GB01 booked GBP and US01 booked USD; the two legs cannot be netted without an FX rate."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "currency-high",
+      "exception_type": "currency_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "currency mismatch exceptions are never auto-resolved by the rule fallback: LOAN-INT-2025-3019: DE01 booked EUR and US01 booked USD; the two legs cannot be netted without an FX rate."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "self-dealing-low",
+      "exception_type": "self_dealing",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "self dealing exceptions are never auto-resolved by the rule fallback: RECHARGE-2025-3020: MX01 is booked as its own counterparty, which points at a mapping error rather than a real intercompany balance."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "self-dealing-high",
+      "exception_type": "self_dealing",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "self dealing exceptions are never auto-resolved by the rule fallback: MGMT-FEE-2025-3021: US01 is booked as its own counterparty, which points at a mapping error rather than a real intercompany balance."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "duplicate-low",
+      "exception_type": "duplicate_reference",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "duplicate reference exceptions are never auto-resolved by the rule fallback: 3 legs share reference RECHARGE-2025-3022; expected exactly 2."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "duplicate-high",
+      "exception_type": "duplicate_reference",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "duplicate reference exceptions are never auto-resolved by the rule fallback: 3 legs share reference SUPPLY-2025-3023; expected exactly 2."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    },
+    {
+      "id": "duplicate-nets-to-zero",
+      "exception_type": "duplicate_reference",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "duplicate reference exceptions are never auto-resolved by the rule fallback: 4 legs share reference LOAN-2025-3024; expected exactly 2."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": null
+    }
+  ]
+}

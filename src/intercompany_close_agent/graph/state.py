@@ -18,10 +18,14 @@ from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ICException
 from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLine
 from intercompany_close_agent.models.review import ReviewDecision
+from intercompany_close_agent.policy import ClosePolicy
 from intercompany_close_agent.triage.models import TriageResult
 
 
 class CloseState(TypedDict, total=False):
+    prepared_by: str
+    policy: ClosePolicy
+
     entities: list[Entity]
     trial_balance: list[TrialBalanceLine]
     ic_transactions: list[ICTransaction]

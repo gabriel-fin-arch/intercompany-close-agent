@@ -1,22 +1,39 @@
 """LLM-backed triage using Claude via langchain-anthropic.
 
-The model is read from ANTHROPIC_MODEL at call time -- nothing in this repo
-ever hardcodes a specific, dated model ID. This module only ever classifies
-an exception and writes a rationale; it never touches the numbers. The
-deterministic matching engine already decided the amounts. The model's job
-here is judgment, not arithmetic.
+The model is DEFAULT_MODEL unless ANTHROPIC_MODEL names another, read at
+call time. This module only ever classifies an exception and writes a
+rationale; it never touches the numbers. The deterministic matching engine
+already decided the amounts. The model's job here is judgment, not
+arithmetic.
 """
 
 from __future__ import annotations
 
 import os
+import time
+from typing import Any
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ICException
+from intercompany_close_agent.triage.metering import CallRecord
 from intercompany_close_agent.triage.models import TriageJudgment, TriageResult
+
+# The model a run uses when ANTHROPIC_MODEL is unset, and the one the triage
+# eval measures (docs/triage-eval.md). Pinned so a reader knows which model a
+# run means, as revrec pins its own.
+DEFAULT_MODEL = "claude-opus-5-5"
+
+# A judgment is a classification, a confidence and a few sentences, but Opus
+# 5.5 always thinks first (adaptive thinking can't be turned off on it), and
+# the thinking counts as output. Without a cap, langchain-anthropic asks for
+# the model's maximum, 128,000 tokens on Opus 5.5, which leaves a cost
+# estimate with no useful ceiling. An answer cut off at the cap doesn't
+# parse, and a close falls back to the rules for it, with a warning. The same
+# cap as revrec's.
+MAX_TOKENS = 16000
 
 SYSTEM_PROMPT = """You are a consolidation accounting assistant helping triage \
 intercompany elimination exceptions during a month-end close under US GAAP.
@@ -43,15 +60,24 @@ Write a short, specific rationale a reviewer could act on without having to \
 re-derive your reasoning from scratch."""
 
 
-def _build_chain():
-    model_name = os.environ.get("ANTHROPIC_MODEL")
-    if not model_name:
-        raise RuntimeError("ANTHROPIC_MODEL is not set")
+def model_name() -> str:
+    return os.environ.get("ANTHROPIC_MODEL") or DEFAULT_MODEL
+
+
+def _build_chain(include_raw: bool = False):
     # No temperature. Claude 4.7 and later reject any non-default value with a
     # 400, and the fallback in triage/node.py used to swallow that, so every
     # run against a current model quietly came back from the rules instead.
-    llm = ChatAnthropic(model=model_name)
-    structured_llm = llm.with_structured_output(TriageJudgment)
+    # `model` and `max_tokens` are ChatAnthropic's documented keywords; the
+    # fields' aliases are `model_name` and `max_tokens_to_sample`, and mypy
+    # only sees the aliases.
+    llm = ChatAnthropic(model=model_name(), max_tokens=MAX_TOKENS)  # type: ignore[call-arg]
+    # json_schema is the API's own structured output. The default,
+    # function_calling, forces a tool call, which Opus 5.5 doesn't accept:
+    # langchain-anthropic then leaves the tool optional, and an answer that
+    # doesn't call it fails. include_raw keeps the model's message next to the
+    # parsed judgment, for the token counts the eval costs a call from.
+    structured_llm = llm.with_structured_output(TriageJudgment, method="json_schema", include_raw=include_raw)
     prompt = ChatPromptTemplate.from_messages(
         [
             ("system", SYSTEM_PROMPT),
@@ -101,9 +127,41 @@ def _describe(exc: ICException, entities: dict[str, Entity] | None = None) -> st
     return description
 
 
-def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None) -> TriageResult:
-    chain = _build_chain()
-    judgment = chain.invoke({"exception_details": _describe(exc, entities)})
+def _result(exc: ICException, judgment: Any) -> TriageResult:
     if not isinstance(judgment, TriageJudgment):
         judgment = TriageJudgment.model_validate(judgment)
     return TriageResult(reference=exc.reference, **judgment.model_dump())
+
+
+def triage_exception(exc: ICException, entities: dict[str, Entity] | None = None) -> TriageResult:
+    chain = _build_chain()
+    return _result(exc, chain.invoke({"exception_details": _describe(exc, entities)}))
+
+
+def triage_measured(
+    exc: ICException, entities: dict[str, Entity] | None = None
+) -> tuple[TriageResult, CallRecord]:
+    """The same call as `triage_exception`, with what it cost and how long it took.
+
+    For the triage eval. An answer that doesn't parse raises, as it does in a
+    close; there the node falls back to the rules, here the eval records the
+    case as failed, with the call's cost, rather than score the rules under
+    the model's name.
+    """
+    chain = _build_chain(include_raw=True)
+    started = time.perf_counter()
+    output = chain.invoke({"exception_details": _describe(exc, entities)})
+    seconds = time.perf_counter() - started
+    usage = getattr(output.get("raw"), "usage_metadata", None)
+    call = CallRecord.from_usage(dict(usage) if usage else None, model_name(), seconds)
+    if output.get("parsing_error") is not None or output.get("parsed") is None:
+        raise UnparsedAnswer(str(output.get("parsing_error") or "no structured output"), call)
+    return _result(exc, output["parsed"]), call
+
+
+class UnparsedAnswer(ValueError):
+    """The model answered, but not in the TriageJudgment shape."""
+
+    def __init__(self, detail: str, call: CallRecord) -> None:
+        super().__init__(f"the model's answer didn't parse: {detail}")
+        self.call = call

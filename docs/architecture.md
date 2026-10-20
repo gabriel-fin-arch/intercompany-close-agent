@@ -50,10 +50,16 @@ in state as `tb_variances`, and surfaced by both the CLI and the dashboard.
 
 ## The thresholds, and why they're set where they are
 
-Every number in `matching/engine.py` and `triage/rules.py` is a judgment
-call. None of them is a standard. What follows is the reasoning, so a
-reviewer can disagree with the values without having to reverse-engineer
-the intent.
+Every number in `policy.py` and `triage/rules.py` is a judgment call. None
+of them is a standard. What follows is the reasoning, so a reviewer can
+disagree with the values without having to reverse-engineer the intent.
+
+The three in `policy.py` -- the tolerance floor and rate, and materiality --
+are defaults. A group sets its own in a policy file like
+`examples/policy.toml`, passed with `run --policy` or the dashboard's
+**Policy file** field, and each run writes the policy it applied, and where
+it came from, at the top of its audit trail. The tie-out tolerance isn't a
+fourth setting; it follows the floor, as below.
 
 **Matching tolerance is two numbers, not one.** A flat absolute tolerance
 treats a USD 500 balance and a USD 250,000 one as if they carried the same
@@ -105,6 +111,9 @@ the graph without changing what it does.
 
 ```python
 class CloseState(TypedDict, total=False):
+    prepared_by: str
+    policy: ClosePolicy
+
     entities: list[Entity]
     trial_balance: list[TrialBalanceLine]
     ic_transactions: list[ICTransaction]
@@ -122,8 +131,11 @@ class CloseState(TypedDict, total=False):
     audit_trail: list[str]
 ```
 
-`entities` / `trial_balance` / `ic_transactions` are populated by the
-caller (CLI or dashboard) before the graph runs. The `ingest` node exists
+`prepared_by` and `policy` are set by `run_close()` from what the caller
+passes: who is running the close, which is required, and the policy, which
+defaults to the built-in one. `entities` / `trial_balance` /
+`ic_transactions` are populated by the caller (CLI or dashboard) before the
+graph runs. The `ingest` node exists
 so the pipeline's shape says explicitly "this is where a real system would
 hit the source files or APIs," even though in this project the loading
 already happened by the time `invoke()` is called.

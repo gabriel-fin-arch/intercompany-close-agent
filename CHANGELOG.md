@@ -11,8 +11,104 @@ All notable changes to this project are logged here.
   version through uv. CI's lint step is now `pre-commit run --all-files`, so
   the hooks and CI check the same things; `uv run pre-commit install` sets
   them up. Needs pre-commit 4.4 or later.
+- A labelled set and an adversarial set for triage, in `evals/triage/`, and
+  a `triage-eval` command that scores the rules or the model on either
+  against the classification the close policy gives. The labelled set has 24
+  cases: all eight exception types in both materiality bands, three touching
+  the manually loaded entity, and the edges of the threshold and the
+  tolerance. The adversarial set has 11, with injection attempts in the
+  reference, the currency code and the memo. Each case keeps what the
+  classifier said and what the close would act on after the taxonomy check.
+  A model run saves every answer with its tokens, cost and latency, and
+  `--estimate` prices one without calling the API. The rules get every case
+  right on both sets; CI runs them and fails if any case changes. Claude
+  Opus 5.5, run on 20 October after an estimate and approval (35 calls, USD
+  0.40), got 23 of 24 and 11 of 11: its one miss escalates a residual one cent
+  under the threshold, and the taxonomy check never had to overrule it.
+  `docs/triage-eval.md` has the sets, the results and what they don't
+  measure.
+- The elimination journal as files to import: `journal.csv`, one row per
+  journal line, and `journal_d365.csv`, the same entries for the General
+  journal data entity of Dynamics 365 Finance, built from Microsoft's
+  published description of it. Both are in every evidence pack, `run` names
+  them when a close finalizes, and the dashboard offers them as downloads.
+  They hold what the close booked and nothing it didn't. The posting date is
+  the end of the month the close is for, not the month of its latest line,
+  which a timing gap pushes past the cutoff. `docs/journal-export.md` gives
+  the columns, what the Dynamics 365 file assumes (one elimination legal
+  entity, the entity as a dimension, a main-account mapping, an existing
+  journal name) and why there is no Lucanet file. Neither has been imported
+  into a live system.
+- The inputs can be one Excel workbook instead of three CSVs: sheets named
+  entities, trial_balance and ic_ledger, with the same columns, read through
+  the same checks, with errors that name the sheet and row. A whole amount
+  that Excel hands back as an integer is written with two decimals, as in the
+  CSVs. `examples/close_template.xlsx` holds the sample, made by the new
+  `write-workbook` command, and a test checks it gives the same dataset and
+  the same `run` output as the CSVs. Needs openpyxl.
+- A close at the size of a real group: `generate-data` takes `--entities`
+  and `--anomaly-rate`, and `scale-run` generates 60 entities and 1,500
+  balances (3,005 ledger lines), closes them offline and times each step.
+  `docs/scale.md` has one run with its machine; a test checks its counts
+  against a fresh run, not its times. With the defaults, the committed sample
+  is unchanged byte for byte.
+- An evidence pack for every finalized close: one folder with who prepared
+  and reviewed it, the policy, the code version, the SHA-256 of each input
+  file, the tie-out, every exception with its triage rationale and decision,
+  every decision with its reviewer and time, and the journal lines booked, in
+  CSV, JSON and text. The dashboard writes it under `evidence/` and offers it
+  as a zip; `run` writes it when the close finalizes without review
+  (`--evidence-dir`). It's read from the run's state, not recomputed.
+- `docs/controls.md`: fourteen controls, each with the code that enforces
+  it, the test that proves it and the file in the pack that evidences it,
+  and what the project doesn't control. A test fails if any file, function
+  or test it names stops existing, or if it cites evidence the pack doesn't
+  write.
+- A close policy file. The materiality threshold and the matching tolerance
+  were constants in `matching/engine.py`; they're read from a TOML file now,
+  passed with `run --policy` or the dashboard's Policy file field, and each
+  run writes the policy it applied, and where it came from, at the top of its
+  audit trail. Without a file the defaults are the old values, and
+  `examples/policy.toml` spells them out; a test checks that it gives the same
+  close as no file at all.
+- Preparer and reviewer. A run records who prepared it (`run --prepared-by`,
+  by default the login name; a required field in the dashboard), every
+  decision records who made it, and `finalize` doesn't book an approval or
+  edit by the preparer: it stays unbooked with the reason in the audit trail.
+  The dashboard refuses such a reviewer before anything is submitted. Names
+  are typed, not authenticated, and `docs/human-in-the-loop.md` says so.
+- A "Results on the sample data" block near the top of the README: what an
+  offline run on the committed dataset finds, in three lines.
+  `intercompany_close_agent.sample_results` computes it from a fresh run, and a
+  test fails if the README and the run disagree.
+
+### Changed
+- Triage has a default model, `claude-opus-5-5` (`DEFAULT_MODEL` in
+  `triage/llm.py`), so `ANTHROPIC_API_KEY` alone turns on the model.
+  `ANTHROPIC_MODEL` still names another; before, a key without it ran the
+  rules. Answers are capped at 16,000 tokens, thinking included, where
+  langchain-anthropic would have asked for 128,000.
 
 ### Fixed
+- Triage asked for structured output by forcing a tool call, which Opus 5.5
+  doesn't accept. langchain-anthropic then left the tool optional and warned
+  that an answer without it would fail, and in a close a failed answer falls
+  back to the rules. Triage now uses the API's own structured output
+  (`json_schema`).
+- The README said the audit trail shows what was eliminated and "approved by
+  whom", and `docs/human-in-the-loop.md` that the narrative records who
+  approved it. Nothing recorded a name. An approved elimination's narrative
+  now says "human-approved (approve) by" and the reviewer's name.
+- The dashboard started every worklist item on approve, so pressing "Submit
+  decisions" without opening anything approved them all. On the sample data
+  that booked four eliminations as human-approved, three of them types that
+  are never auto-resolved, with an audit trail that read as if someone had
+  decided. Items start with no decision now, the worklist isn't submitted
+  until each has one, and `tests/test_dashboard.py` runs the page headless to
+  check both.
+- The README and `examples/README.md` didn't say that the control-account
+  break in the sample run is planted, so a first-time reader could take it for
+  a bug. Both say so now, and which entity it is with the default seed.
 - The commit history has its real dates. Every commit's author date is now the
   time it was made, taken from my Claude Code session logs, and no file
   changed. What each publishing rewrite changed in the files is a bridge

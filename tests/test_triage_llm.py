@@ -5,13 +5,21 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-import pytest
 from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import AIMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
 
 from intercompany_close_agent.models.entity import Entity
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
 from intercompany_close_agent.models.ledger import ICTransaction
-from intercompany_close_agent.triage.llm import _build_chain, _describe, triage_exception
+from intercompany_close_agent.triage.llm import (
+    DEFAULT_MODEL,
+    MAX_TOKENS,
+    _build_chain,
+    _describe,
+    triage_exception,
+    triage_measured,
+)
 from intercompany_close_agent.triage.models import TriageClassification, TriageJudgment
 
 
@@ -59,10 +67,30 @@ def test_describe_flags_a_manually_loaded_entity():
     assert "manually_loaded_entities: DE01" in description
 
 
-def test_build_chain_requires_a_model(monkeypatch):
+def _chat_models(chain) -> list[ChatAnthropic]:
+    bound = [getattr(step, "bound", step) for step in chain.steps]
+    return [model for model in bound if isinstance(model, ChatAnthropic)]
+
+
+def test_build_chain_uses_the_pinned_model_unless_one_is_named(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
-    with pytest.raises(RuntimeError, match="ANTHROPIC_MODEL"):
-        _build_chain()
+    pinned = _chat_models(_build_chain())
+
+    monkeypatch.setenv("ANTHROPIC_MODEL", "some-model")
+    named = _chat_models(_build_chain())
+
+    assert [model.model for model in pinned] == [DEFAULT_MODEL]
+    assert [model.model for model in named] == ["some-model"]
+
+
+def test_build_chain_caps_the_answer_length(monkeypatch):
+    """Left alone, langchain-anthropic asks for the model's maximum output,
+    128,000 tokens on Opus 5.5, and a cost estimate has no useful ceiling."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    assert [model.max_tokens for model in _chat_models(_build_chain())] == [MAX_TOKENS]
 
 
 def test_build_chain_constructs_a_runnable_chain(monkeypatch):
@@ -75,16 +103,61 @@ def test_build_chain_constructs_a_runnable_chain(monkeypatch):
     assert hasattr(chain, "invoke")
 
 
+def test_build_chain_asks_for_the_apis_own_structured_output(monkeypatch):
+    """Opus 5.5 doesn't accept a forced tool call, so the default
+    function_calling method leaves the tool optional and fails whenever the
+    model answers without it. json_schema constrains the answer itself."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    bindings = [step for step in _build_chain().steps if hasattr(step, "kwargs")]
+
+    assert [binding.kwargs["output_config"]["format"]["type"] for binding in bindings] == ["json_schema"]
+    assert all("tools" not in binding.kwargs for binding in bindings)
+
+
+def test_a_measured_call_reads_the_answer_after_the_thinking_and_the_usage(monkeypatch):
+    """The real chain, with the request to the API replaced: Opus 5.5 thinks
+    before it answers, so the JSON comes in a text block after a thinking one."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    answer = AIMessage(
+        content=[
+            {"type": "thinking", "thinking": "", "signature": "sig"},
+            {
+                "type": "text",
+                "text": '{"classification": "needs_human_judgment", "confidence": 0.8, "rationale": "material"}',
+            },
+        ],
+        usage_metadata={
+            "input_tokens": 900,
+            "output_tokens": 300,
+            "total_tokens": 1200,
+            "input_token_details": {"cache_read": 0, "cache_creation": 0},
+        },
+    )
+
+    def generate(self, messages, stop=None, run_manager=None, **kwargs):
+        assert kwargs["output_config"]["format"]["type"] == "json_schema"
+        return ChatResult(generations=[ChatGeneration(message=answer)])
+
+    monkeypatch.setattr(ChatAnthropic, "_generate", generate)
+
+    result, call = triage_measured(_exc())
+
+    assert (result.reference, result.classification) == ("REF-1", TriageClassification.NEEDS_HUMAN_JUDGMENT)
+    assert (call.model, call.input_tokens, call.output_tokens) == (DEFAULT_MODEL, 900, 300)
+    # 900 input tokens at USD 4 and 300 output at USD 20, per million
+    assert str(call.cost_usd) == "0.009600"
+
+
 def test_build_chain_leaves_temperature_at_the_default(monkeypatch):
     """Claude 4.7 and later return a 400 for any non-default temperature, so
     setting one would break the live path on every current model."""
     monkeypatch.setenv("ANTHROPIC_MODEL", "some-model")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
 
-    chain = _build_chain()
-
-    bound = [getattr(step, "bound", step) for step in chain.steps]
-    chat_models = [model for model in bound if isinstance(model, ChatAnthropic)]
+    chat_models = _chat_models(_build_chain())
     assert chat_models, "no ChatAnthropic in the chain"
     assert all(model.temperature is None for model in chat_models)
 

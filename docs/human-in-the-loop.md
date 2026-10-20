@@ -97,6 +97,25 @@ until it happened to fall below some threshold. Both produce the same
 outcome. Only one of them survives being asked "why 0.15?" in a controls
 review.
 
+## Who prepares, and who decides
+
+Every run records who prepared it, and every decision on the worklist
+records who made it. `finalize` won't book an approval or an edit made by
+the preparer: the item stays unbooked, with the reason in the audit trail,
+and the dashboard won't take the worklist from them in the first place.
+Preparing the close and signing off on what it books are separate duties.
+
+The check sits in `finalize` (`graph/nodes.py`), not only in the dashboard,
+for the same reason the triage policy is re-checked in code: a rule that
+only the page enforces is skipped by the first caller that doesn't use the
+page.
+
+Names are typed in, not authenticated. That makes the run's record say who
+did what, and enforces the rule on that record; it doesn't stop anyone
+typing a colleague's name, which takes the group's own sign-in. Case and
+spacing don't make a different person; initials or a nickname would, and
+text alone can't tell.
+
 ## A word on the confidence numbers
 
 The rule-based path returns fixed confidence bands, not probabilities. A
@@ -160,10 +179,17 @@ maps to a specific, auditable outcome in `finalize` (`graph/nodes.py`):
   currency -- there's no FX field anywhere in this model for the system to
   do that conversion itself.
 
+A decision has to be picked. The dashboard starts every item with none and
+won't submit the worklist until each one has one, so an item nobody opened
+can't reach `finalize` as an approval. Reject is the choice for an item that
+can't be settled yet: it books nothing, and the audit trail says so.
+
 Every path leaves a trail: which exceptions were auto-resolved and by what
-rule or model call, which were escalated, what a human decided and when.
-`ReviewDecision.decided_at` and the running `audit_trail` list exist so that
-"why does this number look the way it does" always has an answer.
+rule or model call, which were escalated, what a human decided, who, and
+when. `ReviewDecision.decided_at` and the running `audit_trail` list exist so
+that "why does this number look the way it does" always has an answer, and a
+finalized run writes all of it to an evidence pack, one folder per run;
+`docs/controls.md` says which file in it is the evidence for which control.
 
 ## What this project doesn't try to solve
 

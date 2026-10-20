@@ -15,33 +15,29 @@ from __future__ import annotations
 from collections import defaultdict
 from decimal import Decimal
 
-from intercompany_close_agent.matching.engine import AMOUNT_TOLERANCE_FLOOR
 from intercompany_close_agent.models.control import TrialBalanceVariance
 from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLine
+from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy
 
 # Group-standard account codes, i.e. post-COA-mapping (see ingest/loaders.py).
 IC_RECEIVABLE_ACCOUNT = "IC_RECEIVABLE"
 IC_PAYABLE_ACCOUNT = "IC_PAYABLE"
 
-# Derived from the matching tolerance rather than set independently: a group
-# that treats a difference as rounding noise when matching one balance can't
-# coherently call the same difference a control failure when totalling them.
-# The floor is used, not the relative rate -- this compares totals, and a
-# percentage of a total would scale the tolerance with the size of the
-# entity's book rather than with the error.
-TIEOUT_TOLERANCE = AMOUNT_TOLERANCE_FLOOR
-
 
 def reconcile_to_trial_balance(
     transactions: list[ICTransaction],
     trial_balance: list[TrialBalanceLine],
+    policy: ClosePolicy = DEFAULT_POLICY,
 ) -> list[TrialBalanceVariance]:
     """Compare each entity's IC subledger position to its TB control accounts.
 
     Both sides use the same sign convention: positive is a receivable, and
     negative is a payable, so the two totals should net to the same number
-    for every entity in scope.
+    for every entity in scope. The tolerance is the policy's
+    `tieout_tolerance`, which is derived from the matching floor rather than
+    set on its own (see policy.py for why).
     """
+    tolerance = policy.tieout_tolerance
     ledger_by_entity: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     for txn in transactions:
         ledger_by_entity[txn.entity_code] += txn.amount
@@ -62,7 +58,7 @@ def reconcile_to_trial_balance(
                 ledger_total=ledger_total,
                 trial_balance_total=tb_total,
                 variance=variance,
-                within_tolerance=abs(variance) <= TIEOUT_TOLERANCE,
+                within_tolerance=abs(variance) <= tolerance,
             )
         )
 

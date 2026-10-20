@@ -13,12 +13,17 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
+from intercompany_close_agent.evidence import write_pack, zip_pack
 from intercompany_close_agent.graph.graph import resume_close, run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
-from intercompany_close_agent.models.review import ReviewAction, parse_override_amount
+from intercompany_close_agent.models.review import ReviewAction, parse_override_amount, same_person
+from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy, PolicyError
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 
 load_dotenv()
+
+# Each finalized run writes its evidence pack here, one folder per run.
+EVIDENCE_DIR = Path("evidence")
 
 st.set_page_config(page_title="Intercompany Close Agent", layout="wide")
 
@@ -28,28 +33,54 @@ st.caption("Matching -> eliminations -> triage -> human review, for the intercom
 
 with st.sidebar:
     st.header("Run")
-    data_dir_input = st.text_input("Synthetic data directory", value=str(DEFAULT_DATA_DIR))
+    data_dir_input = st.text_input(
+        "Data folder or workbook",
+        value=str(DEFAULT_DATA_DIR),
+        help="A folder with entities.csv, trial_balance.csv and ic_ledger.csv, or an .xlsx workbook "
+        "with sheets of those names, like examples/close_template.xlsx.",
+    )
+    prepared_by_input = st.text_input(
+        "Prepared by",
+        help="Who is preparing this close. It goes into the audit trail, and this person can't also "
+        "review the worklist.",
+    )
+    policy_input = st.text_input(
+        "Policy file",
+        help="A TOML file with the materiality threshold and tolerances, like examples/policy.toml. "
+        "Leave blank for the built-in defaults.",
+    )
     run_clicked = st.button("Run close pipeline", type="primary")
     if st.session_state.get("result") is not None and st.button("Reset"):
-        for key in ("graph", "config", "result", "final"):
+        for key in ("graph", "config", "result", "final", "data_dir", "evidence"):
             st.session_state.pop(key, None)
         st.rerun()
 
 if run_clicked:
+    if not prepared_by_input.strip():
+        st.error("Cannot run the close: enter who is preparing it under **Prepared by**.")
+        st.stop()
     try:
         entities, trial_balance, transactions = load_dataset(Path(data_dir_input))
-    except DataLoadError as exc:
+        policy = ClosePolicy.from_toml(Path(policy_input.strip())) if policy_input.strip() else DEFAULT_POLICY
+    except (DataLoadError, PolicyError) as exc:
         st.error(f"Cannot run the close: {exc}")
         st.stop()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="dashboard-run")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="dashboard-run", prepared_by=prepared_by_input, policy=policy
+    )
     st.session_state["graph"] = graph
     st.session_state["config"] = config
     st.session_state["result"] = result
+    st.session_state["data_dir"] = Path(data_dir_input)
     st.session_state.pop("final", None)
+    st.session_state.pop("evidence", None)
+    if "__interrupt__" not in result:
+        # Nothing needed review, so the close finalized in this one step.
+        st.session_state["evidence"] = write_pack(result, EVIDENCE_DIR, Path(data_dir_input))
 
 result = st.session_state.get("result")
 if result is None:
-    st.info("Pick a data directory and click **Run close pipeline** to start.")
+    st.info("Pick a data directory, say who is preparing the close, and click **Run close pipeline** to start.")
     st.stop()
 
 final = st.session_state.get("final")
@@ -84,6 +115,28 @@ for line in display_state["audit_trail"]:
     st.text(f"- {line}")
 
 
+def _render_evidence() -> None:
+    folder = st.session_state.get("evidence")
+    if folder is None:
+        return
+    st.subheader("Evidence pack")
+    st.caption(
+        f"Written to {folder}: who prepared and reviewed the close, the policy, the input file hashes, "
+        f"the tie-out, every exception and decision, and the entries booked. docs/controls.md says which "
+        f"file is the evidence for which control."
+    )
+    st.download_button(
+        "Download evidence pack", data=zip_pack(folder), file_name=f"{folder.name}.zip", mime="application/zip"
+    )
+    st.caption(
+        "The entries booked, as a journal to import: one CSV row per line, or laid out for the Dynamics 365 "
+        "Finance General journal entity. docs/journal-export.md says what each assumes."
+    )
+    journals = (("Download journal (CSV)", "journal.csv"), ("Download journal (Dynamics 365)", "journal_d365.csv"))
+    for label, name in journals:
+        st.download_button(label, data=(folder / name).read_bytes(), file_name=f"{folder.name}-{name}", mime="text/csv")
+
+
 def _render_eliminations(eliminations) -> None:
     st.subheader(f"Eliminations ({len(eliminations)})")
     for elim in eliminations:
@@ -98,6 +151,7 @@ def _render_eliminations(eliminations) -> None:
 
 if final is not None:
     st.success("Close finalized.")
+    _render_evidence()
     _render_eliminations(final.get("eliminations", []))
 
 elif "__interrupt__" in result:
@@ -113,11 +167,15 @@ elif "__interrupt__" in result:
             st.write(f"**Why:** {item['detected_reason']}")
             st.write(f"**Triage rationale** (confidence {item['confidence']:.2f}): {item['rationale']}")
 
+            # No default. Streamlit would otherwise select the first option,
+            # approve, and submitting the worklist would approve every item
+            # nobody opened, in an audit trail that reads as if someone had.
             action = st.radio(
                 "Decision",
                 options=[a.value for a in ReviewAction],
                 key=f"action_{item['reference']}",
                 horizontal=True,
+                index=None,
             )
             note = st.text_input("Reviewer note", key=f"note_{item['reference']}")
             override_amount = None
@@ -139,19 +197,40 @@ elif "__interrupt__" in result:
                 "override_amount": override_amount or None,
             }
 
+    preparer = result["prepared_by"]
+    reviewer = st.text_input(
+        "Reviewer",
+        key="reviewer",
+        help=f"Who is deciding these items. {preparer} prepared this run and can't also review it.",
+    )
+
     if st.button("Submit decisions", type="primary"):
-        # Validate the free-text amounts before resuming: an unparseable one
-        # would otherwise crash resume_close deep in pydantic, losing the
-        # whole worklist. Report each bad field and let the reviewer fix it.
+        # Every item needs a decision someone picked, by someone other than
+        # the preparer (finalize checks that too), and the free-text amounts
+        # are validated before resuming: an unparseable one would otherwise
+        # crash resume_close deep in pydantic, losing the whole worklist.
+        # Report each problem and let the reviewer fix it.
         payload: list[dict] = []
         errors: list[str] = []
+        if not reviewer.strip():
+            errors.append("Enter who is reviewing under **Reviewer**.")
+        elif same_person(reviewer, preparer):
+            errors.append(f"{preparer} prepared this run; the worklist needs a reviewer who didn't.")
+        undecided = [ref for ref, decision in decisions.items() if decision["action"] is None]
+        if undecided:
+            errors.append(
+                f"No decision yet for {len(undecided)} item(s): {', '.join(undecided)}. "
+                f"Each needs approve, reject or edit; reject books nothing."
+            )
         for ref, decision in decisions.items():
+            if decision["action"] is None:
+                continue
             try:
                 amount = parse_override_amount(decision["override_amount"])
             except ValueError as exc:
                 errors.append(f"{ref}: {exc}")
                 continue
-            payload.append({**decision, "override_amount": amount})
+            payload.append({**decision, "reviewer": reviewer, "override_amount": amount})
 
         if errors:
             for message in errors:
@@ -159,8 +238,10 @@ elif "__interrupt__" in result:
         else:
             final_result = resume_close(st.session_state["graph"], st.session_state["config"], payload)
             st.session_state["final"] = final_result
+            st.session_state["evidence"] = write_pack(final_result, EVIDENCE_DIR, st.session_state["data_dir"])
             st.rerun()
 
 else:
     st.success("No exceptions needed human review -- close finalized automatically.")
+    _render_evidence()
     _render_eliminations(result.get("eliminations", []))

@@ -1,0 +1,279 @@
+{
+  "name": "labelled",
+  "description": "Synthetic exceptions with the classification the close policy gives each one: all eight exception types, both materiality bands, and balances touching ZA01, the group's one manually loaded entity. Amounts are USD; the policy is the default one (materiality 5,000.00; tolerance the larger of 1.00 and 0.01% of the larger leg); the close is September 2025.",
+  "entities": [
+    {"code": "US01", "name": "Vireon Biosciences US Inc", "region": "US", "local_currency": "USD", "interfaced": true},
+    {"code": "DE01", "name": "Vireon Pharma GmbH", "region": "EMEA", "local_currency": "EUR", "interfaced": true},
+    {"code": "GB01", "name": "Vireon Life Sciences UK Ltd", "region": "EMEA", "local_currency": "GBP", "interfaced": true},
+    {"code": "IE01", "name": "Vireon Ireland Manufacturing Ltd", "region": "EMEA", "local_currency": "EUR", "interfaced": true},
+    {"code": "BR01", "name": "Vireon Farmaceutica do Brasil Ltda", "region": "LATAM", "local_currency": "BRL", "interfaced": true},
+    {"code": "MX01", "name": "Vireon Mexico SA de CV", "region": "LATAM", "local_currency": "MXN", "interfaced": true},
+    {"code": "ZA01", "name": "Vireon South Africa Pty Ltd", "region": "AFRICA", "local_currency": "ZAR", "interfaced": false}
+  ],
+  "cases": [
+    {
+      "id": "amount-low",
+      "why": "A 300.00 residual on a 12,000.00 recharge between two interfaced entities: below materiality, no control concern.",
+      "expected_type": "amount_mismatch",
+      "expected_materiality": "low",
+      "expected": "auto_resolvable",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "DE01", "reference": "RECHARGE-2025-3001", "amount": "12000.00", "transaction_date": "2025-09-26"},
+        {"entity_code": "DE01", "counterparty_code": "US01", "reference": "RECHARGE-2025-3001", "amount": "-11700.00", "transaction_date": "2025-09-26"}
+      ]
+    },
+    {
+      "id": "amount-high",
+      "why": "A 12,000.00 residual is above materiality, whatever explains it.",
+      "expected_type": "amount_mismatch",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "GB01", "reference": "MGMT-FEE-2025-3002", "amount": "250000.00", "transaction_date": "2025-09-30"},
+        {"entity_code": "GB01", "counterparty_code": "US01", "reference": "MGMT-FEE-2025-3002", "amount": "-238000.00", "transaction_date": "2025-09-30"}
+      ]
+    },
+    {
+      "id": "amount-low-manual",
+      "why": "A 400.00 residual is immaterial, but ZA01 keys its ledger in by hand, so a small break there is not eliminated unreviewed.",
+      "expected_type": "amount_mismatch",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "ZA01", "reference": "RECHARGE-2025-3003", "amount": "8000.00", "transaction_date": "2025-09-24"},
+        {"entity_code": "ZA01", "counterparty_code": "US01", "reference": "RECHARGE-2025-3003", "amount": "-7600.00", "transaction_date": "2025-09-24"}
+      ]
+    },
+    {
+      "id": "amount-at-threshold",
+      "why": "A residual of exactly 5,000.00 is at the threshold, and at the threshold counts as material.",
+      "expected_type": "amount_mismatch",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "IE01", "counterparty_code": "DE01", "reference": "SUPPLY-2025-3004", "amount": "105000.00", "transaction_date": "2025-09-18"},
+        {"entity_code": "DE01", "counterparty_code": "IE01", "reference": "SUPPLY-2025-3004", "amount": "-100000.00", "transaction_date": "2025-09-18"}
+      ]
+    },
+    {
+      "id": "amount-below-threshold",
+      "why": "A residual of 4,999.99, one cent under the threshold, between interfaced entities.",
+      "expected_type": "amount_mismatch",
+      "expected_materiality": "low",
+      "expected": "auto_resolvable",
+      "legs": [
+        {"entity_code": "IE01", "counterparty_code": "DE01", "reference": "SUPPLY-2025-3005", "amount": "104999.99", "transaction_date": "2025-09-18"},
+        {"entity_code": "DE01", "counterparty_code": "IE01", "reference": "SUPPLY-2025-3005", "amount": "-100000.00", "transaction_date": "2025-09-18"}
+      ]
+    },
+    {
+      "id": "amount-payable-larger",
+      "why": "The payable is the larger leg, so the residual is negative; materiality reads its size, 1,250.00, which is immaterial.",
+      "expected_type": "amount_mismatch",
+      "expected_materiality": "low",
+      "expected": "auto_resolvable",
+      "legs": [
+        {"entity_code": "BR01", "counterparty_code": "MX01", "reference": "ROYALTY-2025-3006", "amount": "40000.00", "transaction_date": "2025-09-12"},
+        {"entity_code": "MX01", "counterparty_code": "BR01", "reference": "ROYALTY-2025-3006", "amount": "-41250.00", "transaction_date": "2025-09-12"}
+      ]
+    },
+    {
+      "id": "amount-just-outside-tolerance",
+      "why": "A 5.01 residual on a 50,000.00 balance, one cent over its 5.00 tolerance: a break, and an immaterial one.",
+      "expected_type": "amount_mismatch",
+      "expected_materiality": "low",
+      "expected": "auto_resolvable",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "DE01", "reference": "LOAN-INT-2025-3007", "amount": "50000.00", "transaction_date": "2025-09-30"},
+        {"entity_code": "DE01", "counterparty_code": "US01", "reference": "LOAN-INT-2025-3007", "amount": "-49994.99", "transaction_date": "2025-09-30"}
+      ]
+    },
+    {
+      "id": "timing-low",
+      "why": "A 3,000.00 balance booked either side of the cutoff: the whole balance is at stake, and it is immaterial.",
+      "expected_type": "timing_gap",
+      "expected_materiality": "low",
+      "expected": "auto_resolvable",
+      "legs": [
+        {"entity_code": "GB01", "counterparty_code": "IE01", "reference": "SVC-2025-3008", "amount": "3000.00", "transaction_date": "2025-09-29"},
+        {"entity_code": "IE01", "counterparty_code": "GB01", "reference": "SVC-2025-3008", "amount": "-3000.00", "transaction_date": "2025-10-02"}
+      ]
+    },
+    {
+      "id": "timing-high",
+      "why": "A 50,000.00 balance straddling the cutoff by one day: the legs agree, but the whole balance sits in two periods.",
+      "expected_type": "timing_gap",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "MX01", "reference": "SVC-2025-3009", "amount": "50000.00", "transaction_date": "2025-09-30"},
+        {"entity_code": "MX01", "counterparty_code": "US01", "reference": "SVC-2025-3009", "amount": "-50000.00", "transaction_date": "2025-10-01"}
+      ]
+    },
+    {
+      "id": "timing-low-manual",
+      "why": "An immaterial timing gap, booked late by ZA01, which loads by hand.",
+      "expected_type": "timing_gap",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "ZA01", "counterparty_code": "GB01", "reference": "SVC-2025-3010", "amount": "2500.00", "transaction_date": "2025-10-03"},
+        {"entity_code": "GB01", "counterparty_code": "ZA01", "reference": "SVC-2025-3010", "amount": "-2500.00", "transaction_date": "2025-09-30"}
+      ]
+    },
+    {
+      "id": "missing-low",
+      "why": "GB01 never booked its side. A missing counterparty is never auto-resolved, however small.",
+      "expected_type": "missing_counterparty",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "DE01", "counterparty_code": "GB01", "reference": "RECHARGE-2025-3011", "amount": "800.00", "transaction_date": "2025-09-22"}
+      ]
+    },
+    {
+      "id": "missing-high",
+      "why": "A 75,000.00 payable with no receivable booked against it.",
+      "expected_type": "missing_counterparty",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "BR01", "reference": "LOAN-2025-3012", "amount": "-75000.00", "transaction_date": "2025-09-15"}
+      ]
+    },
+    {
+      "id": "missing-manual-side",
+      "why": "The entity that booked nothing is ZA01, the manually loaded one: it names the exception without having a leg in it.",
+      "expected_type": "missing_counterparty",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "ZA01", "reference": "MGMT-FEE-2025-3013", "amount": "1200.00", "transaction_date": "2025-09-30"}
+      ]
+    },
+    {
+      "id": "counterparty-low",
+      "why": "DE01 booked the balance against GB01 instead of US01. Someone has to say which entity is right, whatever the amount.",
+      "expected_type": "counterparty_mismatch",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "DE01", "reference": "RECHARGE-2025-3014", "amount": "2000.00", "transaction_date": "2025-09-19"},
+        {"entity_code": "DE01", "counterparty_code": "GB01", "reference": "RECHARGE-2025-3014", "amount": "-2000.00", "transaction_date": "2025-09-19"}
+      ]
+    },
+    {
+      "id": "counterparty-high",
+      "why": "A 60,000.00 balance IE01 booked against DE01 instead of GB01.",
+      "expected_type": "counterparty_mismatch",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "GB01", "counterparty_code": "IE01", "reference": "SUPPLY-2025-3015", "amount": "60000.00", "transaction_date": "2025-09-25"},
+        {"entity_code": "IE01", "counterparty_code": "DE01", "reference": "SUPPLY-2025-3015", "amount": "-60000.00", "transaction_date": "2025-09-25"}
+      ]
+    },
+    {
+      "id": "sign-low",
+      "why": "Both entities booked a receivable. Netting them would eliminate in a direction nobody can vouch for.",
+      "expected_type": "sign_mismatch",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "BR01", "counterparty_code": "MX01", "reference": "ROYALTY-2025-3016", "amount": "1500.00", "transaction_date": "2025-09-10"},
+        {"entity_code": "MX01", "counterparty_code": "BR01", "reference": "ROYALTY-2025-3016", "amount": "1500.00", "transaction_date": "2025-09-10"}
+      ]
+    },
+    {
+      "id": "sign-high",
+      "why": "Both entities booked a 20,000.00 payable.",
+      "expected_type": "sign_mismatch",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "DE01", "counterparty_code": "IE01", "reference": "SUPPLY-2025-3017", "amount": "-20000.00", "transaction_date": "2025-09-23"},
+        {"entity_code": "IE01", "counterparty_code": "DE01", "reference": "SUPPLY-2025-3017", "amount": "-20000.00", "transaction_date": "2025-09-23"}
+      ]
+    },
+    {
+      "id": "currency-low",
+      "why": "The legs are in GBP and USD. Netting them would apply a 1:1 rate; there is no rate in scope, so a person decides.",
+      "expected_type": "currency_mismatch",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "GB01", "counterparty_code": "US01", "reference": "SVC-2025-3018", "amount": "900.00", "currency": "GBP", "transaction_date": "2025-09-17"},
+        {"entity_code": "US01", "counterparty_code": "GB01", "reference": "SVC-2025-3018", "amount": "-900.00", "transaction_date": "2025-09-17"}
+      ]
+    },
+    {
+      "id": "currency-high",
+      "why": "A 30,000.00 balance, EUR on one side and USD on the other.",
+      "expected_type": "currency_mismatch",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "DE01", "counterparty_code": "US01", "reference": "LOAN-INT-2025-3019", "amount": "30000.00", "currency": "EUR", "transaction_date": "2025-09-30"},
+        {"entity_code": "US01", "counterparty_code": "DE01", "reference": "LOAN-INT-2025-3019", "amount": "-30000.00", "transaction_date": "2025-09-30"}
+      ]
+    },
+    {
+      "id": "self-dealing-low",
+      "why": "MX01 booked a balance with itself: a mapping error, not an intercompany balance.",
+      "expected_type": "self_dealing",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "MX01", "counterparty_code": "MX01", "reference": "RECHARGE-2025-3020", "amount": "700.00", "transaction_date": "2025-09-08"}
+      ]
+    },
+    {
+      "id": "self-dealing-high",
+      "why": "Both legs of a 15,000.00 balance are US01 against US01. They net to zero, which is what makes them dangerous to eliminate.",
+      "expected_type": "self_dealing",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "US01", "reference": "MGMT-FEE-2025-3021", "amount": "15000.00", "transaction_date": "2025-09-30"},
+        {"entity_code": "US01", "counterparty_code": "US01", "reference": "MGMT-FEE-2025-3021", "amount": "-15000.00", "transaction_date": "2025-09-30"}
+      ]
+    },
+    {
+      "id": "duplicate-low",
+      "why": "DE01's payable is booked twice under one reference: three legs where there should be two.",
+      "expected_type": "duplicate_reference",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "DE01", "reference": "RECHARGE-2025-3022", "amount": "1000.00", "transaction_date": "2025-09-16"},
+        {"entity_code": "DE01", "counterparty_code": "US01", "reference": "RECHARGE-2025-3022", "amount": "-1000.00", "transaction_date": "2025-09-16"},
+        {"entity_code": "DE01", "counterparty_code": "US01", "reference": "RECHARGE-2025-3022", "amount": "-1000.00", "transaction_date": "2025-09-17"}
+      ]
+    },
+    {
+      "id": "duplicate-high",
+      "why": "GB01's 40,000.00 receivable is booked twice, so the legs net to 40,000.00.",
+      "expected_type": "duplicate_reference",
+      "expected_materiality": "high",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "GB01", "counterparty_code": "IE01", "reference": "SUPPLY-2025-3023", "amount": "40000.00", "transaction_date": "2025-09-29"},
+        {"entity_code": "IE01", "counterparty_code": "GB01", "reference": "SUPPLY-2025-3023", "amount": "-40000.00", "transaction_date": "2025-09-29"},
+        {"entity_code": "GB01", "counterparty_code": "IE01", "reference": "SUPPLY-2025-3023", "amount": "40000.00", "transaction_date": "2025-09-30"}
+      ]
+    },
+    {
+      "id": "duplicate-nets-to-zero",
+      "why": "A 500,000.00 balance posted twice on both sides nets to zero, so it bands as immaterial. Only its type keeps it from being eliminated twice.",
+      "expected_type": "duplicate_reference",
+      "expected_materiality": "low",
+      "expected": "needs_human_judgment",
+      "legs": [
+        {"entity_code": "US01", "counterparty_code": "IE01", "reference": "LOAN-2025-3024", "amount": "500000.00", "transaction_date": "2025-09-01"},
+        {"entity_code": "IE01", "counterparty_code": "US01", "reference": "LOAN-2025-3024", "amount": "-500000.00", "transaction_date": "2025-09-01"},
+        {"entity_code": "US01", "counterparty_code": "IE01", "reference": "LOAN-2025-3024", "amount": "500000.00", "transaction_date": "2025-09-02"},
+        {"entity_code": "IE01", "counterparty_code": "US01", "reference": "LOAN-2025-3024", "amount": "-500000.00", "transaction_date": "2025-09-02"}
+      ]
+    }
+  ]
+}

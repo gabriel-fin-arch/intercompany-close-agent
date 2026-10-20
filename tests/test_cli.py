@@ -40,7 +40,7 @@ def test_every_command_prints_its_help():
     """Below typer 0.16, --help goes through a click API that changed in 8.2 and
     dies with a traceback. Nothing else in this file asks for help, so the suite
     stayed green on a floor that could not print a usage line."""
-    for command in ([], ["run"], ["generate-data"]):
+    for command in ([], ["run"], ["generate-data"], ["triage-eval"]):
         result = runner.invoke(app, [*command, "--help"])
 
         assert result.exit_code == 0, result.output
@@ -78,3 +78,52 @@ def test_run_against_committed_sample_dataset():
     assert result.exit_code == 0
     assert "ingested" in result.output
     assert "matched" in result.output
+
+
+SAMPLE = Path(__file__).resolve().parent.parent / "data" / "synthetic"
+EXAMPLE_POLICY = Path(__file__).resolve().parent.parent / "examples" / "policy.toml"
+
+
+def test_run_records_who_prepared_it_and_the_policy_it_used(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+    result = runner.invoke(
+        app,
+        ["run", "--data-dir", str(SAMPLE), "--policy", str(EXAMPLE_POLICY), "--prepared-by", "Ana Ruiz"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "  - prepared by Ana Ruiz" in result.output
+    assert f"  - policy ({EXAMPLE_POLICY}): materiality threshold 5000.00;" in result.output
+
+
+def test_run_without_prepared_by_records_the_login_name(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    monkeypatch.setattr("getpass.getuser", lambda: "aruiz")
+
+    result = runner.invoke(app, ["run", "--data-dir", str(SAMPLE)])
+
+    assert result.exit_code == 0, result.output
+    assert "  - prepared by aruiz" in result.output
+    assert "  - policy (built-in defaults):" in result.output
+
+
+def test_run_refuses_a_policy_it_cannot_use(tmp_path: Path):
+    policy = tmp_path / "policy.toml"
+    policy.write_text("materiality_threshold = -5\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["run", "--data-dir", str(SAMPLE), "--policy", str(policy)])
+
+    assert result.exit_code == 1
+    assert "Cannot run the close:" in result.output
+    assert "materiality_threshold" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_run_refuses_a_blank_preparer():
+    result = runner.invoke(app, ["run", "--data-dir", str(SAMPLE), "--prepared-by", "  "])
+
+    assert result.exit_code == 1
+    assert "--prepared-by can't be blank" in result.output

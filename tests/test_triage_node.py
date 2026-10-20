@@ -59,6 +59,28 @@ def test_uses_llm_when_configured(monkeypatch):
     assert result.rationale == "from the fake LLM"
 
 
+def test_an_api_key_alone_turns_on_the_model(monkeypatch):
+    """The model defaults to DEFAULT_MODEL, so ANTHROPIC_MODEL is optional."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    calls = []
+
+    def fake_llm_triage(exc: ICException, entities=None) -> TriageResult:
+        calls.append(exc.reference)
+        return TriageResult(
+            reference=exc.reference,
+            classification=TriageClassification.NEEDS_HUMAN_JUDGMENT,
+            confidence=0.5,
+            rationale="from the fake LLM",
+        )
+
+    monkeypatch.setattr("intercompany_close_agent.triage.llm.triage_exception", fake_llm_triage)
+
+    triage_node.triage_exception(_exc())
+
+    assert calls == ["REF-1"]
+
+
 def test_falls_back_to_rules_when_llm_call_fails(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setenv("ANTHROPIC_MODEL", "test-model")

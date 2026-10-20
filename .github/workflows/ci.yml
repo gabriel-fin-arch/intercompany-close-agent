@@ -33,6 +33,15 @@ jobs:
           uv run python -m intercompany_close_agent.cli generate-data
           uv run python -m intercompany_close_agent.cli run
 
+      - name: Score triage offline on the labelled and adversarial sets
+        # The rules and the taxonomy check, with no API key. Exits 1 if any
+        # case gets a classification other than the one its set expects. The
+        # test step above also runs the taxonomy check alone on both sets,
+        # behind a classifier that answers auto_resolvable to everything.
+        run: |
+          uv run python -m intercompany_close_agent.cli triage-eval --set labelled
+          uv run python -m intercompany_close_agent.cli triage-eval --set adversarial
+
   lowest-versions:
     # The floors in pyproject are a promise the job above never tests: it
     # resolves to the newest of everything. This one installs the oldest
