@@ -271,6 +271,10 @@ uv run streamlit run app/streamlit_app.py
 
 # run the test suite
 uv run pytest
+
+# install the git hooks once: ruff, whitespace and file checks, and a refusal
+# to commit a .env or an API key; CI runs the same hooks on every file
+uv run pre-commit install
 ```
 
 The sample run is meant to find problems, and the first one it reports is
