@@ -322,3 +322,20 @@ def test_the_saved_model_run_is_what_the_doc_reports(name: str):
         f"{longest:.1f} s |"
     )
     assert row in doc, row
+
+
+def test_the_readme_states_the_model_run_as_saved():
+    """Rule for every README figure: it comes from something in the repo, and
+    the CI fails if the two drift apart."""
+    paths = [results_path(name, "model", "claude-opus-5-5", SETS_DIR) for name in SET_NAMES]
+    runs = [EvalRun.model_validate_json(path.read_text(encoding="utf-8")) for path in paths]
+    readme = " ".join((ROOT / "README.md").read_text(encoding="utf-8").split())
+    calls = [call for run in runs for call in run.calls()]
+    cost = sum((run.cost_usd() or Decimal("0")) for run in runs)
+    labelled, adversarial = runs
+
+    assert {run.run_at[:10] for run in runs} == {"2026-10-20"}
+    assert (
+        f"run once on 20 October 2026 at the API's default effort ({len(calls)} calls, USD {cost:.2f}), "
+        f"got {labelled.passed} of {len(labelled.cases)} and {adversarial.passed} of {len(adversarial.cases)}"
+    ) in readme

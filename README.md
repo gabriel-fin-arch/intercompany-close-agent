@@ -36,7 +36,9 @@ booked.
   lines, timed.
 - `docs/triage-eval.md`: triage scored on a labelled set and on one built
   of injection attempts, against the answer the policy gives. Claude Opus
-  5.5 got 23 of 24 and 11 of 11, its one miss a cautious escalation.
+  5.5, run once on 20 October 2026 at the API's default effort (35 calls,
+  USD 0.40), got 23 of 24 and 11 of 11; its one miss is a cautious
+  escalation.
 - How I built this: which decisions are mine and what an AI assistant wrote.
 - The command block below runs the whole close offline; CI is green.
 
