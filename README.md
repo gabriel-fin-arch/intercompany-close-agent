@@ -40,6 +40,8 @@ the tests rerun the close offline and fail if these figures change):
 - §3: the numbers are deterministic Python with tests; the model only triages
   and writes the rationale.
 - `docs/human-in-the-loop.md`: the six exception types that never auto-resolve.
+- `docs/controls.md`: each control, the code that enforces it, the test that
+  proves it, and what the evidence pack of a finalized run keeps for it.
 - How I built this: which decisions are mine and what an AI assistant wrote.
 - The command block below runs the whole close offline; CI is green.
 

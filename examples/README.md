@@ -61,3 +61,6 @@ close pipeline** against the default data directory, and the same worklist
 from `sample_cli_run.txt` renders as an interactive review screen with
 approve/reject/edit per item. Every item needs a decision, and the
 **Reviewer** who submits them has to be someone other than the preparer.
+Once the close is finalized, the page writes its evidence pack to a new
+folder under `evidence/` and offers it as a zip; `docs/controls.md` says
+what each file in it is evidence of.

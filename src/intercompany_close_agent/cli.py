@@ -20,6 +20,7 @@ from pathlib import Path
 import typer
 from dotenv import load_dotenv
 
+from intercompany_close_agent.evidence import write_pack
 from intercompany_close_agent.graph.graph import run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
 from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy, PolicyError
@@ -52,6 +53,9 @@ def run(
     ),
     prepared_by: str | None = typer.Option(
         None, help="Who is preparing this close, for the audit trail. Defaults to your login name."
+    ),
+    evidence_dir: Path = typer.Option(
+        Path("evidence"), help="Where a run that finalizes writes its evidence pack, one folder per run."
     ),
 ) -> None:
     """Run the close pipeline end to end and print the results."""
@@ -105,10 +109,12 @@ def run(
         typer.echo("")
         typer.echo("Run the reviewer dashboard to approve, reject or edit these:")
         typer.echo("  uv run streamlit run app/streamlit_app.py")
+        typer.echo("The close finalizes, and writes its evidence pack, once every item has a decision.")
     else:
         n_eliminations = len(result.get("eliminations", []))
         typer.echo("")
         typer.echo(f"No items needed human review. {n_eliminations} elimination(s) finalized.")
+        typer.echo(f"Evidence pack: {write_pack(result, evidence_dir, data_dir)}")
 
 
 def _login_name() -> str:

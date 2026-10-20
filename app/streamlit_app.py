@@ -13,6 +13,7 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
+from intercompany_close_agent.evidence import write_pack, zip_pack
 from intercompany_close_agent.graph.graph import resume_close, run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
 from intercompany_close_agent.models.review import ReviewAction, parse_override_amount, same_person
@@ -20,6 +21,9 @@ from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy, PolicyE
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 
 load_dotenv()
+
+# Each finalized run writes its evidence pack here, one folder per run.
+EVIDENCE_DIR = Path("evidence")
 
 st.set_page_config(page_title="Intercompany Close Agent", layout="wide")
 
@@ -42,7 +46,7 @@ with st.sidebar:
     )
     run_clicked = st.button("Run close pipeline", type="primary")
     if st.session_state.get("result") is not None and st.button("Reset"):
-        for key in ("graph", "config", "result", "final"):
+        for key in ("graph", "config", "result", "final", "data_dir", "evidence"):
             st.session_state.pop(key, None)
         st.rerun()
 
@@ -62,7 +66,12 @@ if run_clicked:
     st.session_state["graph"] = graph
     st.session_state["config"] = config
     st.session_state["result"] = result
+    st.session_state["data_dir"] = Path(data_dir_input)
     st.session_state.pop("final", None)
+    st.session_state.pop("evidence", None)
+    if "__interrupt__" not in result:
+        # Nothing needed review, so the close finalized in this one step.
+        st.session_state["evidence"] = write_pack(result, EVIDENCE_DIR, Path(data_dir_input))
 
 result = st.session_state.get("result")
 if result is None:
@@ -101,6 +110,21 @@ for line in display_state["audit_trail"]:
     st.text(f"- {line}")
 
 
+def _render_evidence() -> None:
+    folder = st.session_state.get("evidence")
+    if folder is None:
+        return
+    st.subheader("Evidence pack")
+    st.caption(
+        f"Written to {folder}: who prepared and reviewed the close, the policy, the input file hashes, "
+        f"the tie-out, every exception and decision, and the entries booked. docs/controls.md says which "
+        f"file is the evidence for which control."
+    )
+    st.download_button(
+        "Download evidence pack", data=zip_pack(folder), file_name=f"{folder.name}.zip", mime="application/zip"
+    )
+
+
 def _render_eliminations(eliminations) -> None:
     st.subheader(f"Eliminations ({len(eliminations)})")
     for elim in eliminations:
@@ -115,6 +139,7 @@ def _render_eliminations(eliminations) -> None:
 
 if final is not None:
     st.success("Close finalized.")
+    _render_evidence()
     _render_eliminations(final.get("eliminations", []))
 
 elif "__interrupt__" in result:
@@ -201,8 +226,10 @@ elif "__interrupt__" in result:
         else:
             final_result = resume_close(st.session_state["graph"], st.session_state["config"], payload)
             st.session_state["final"] = final_result
+            st.session_state["evidence"] = write_pack(final_result, EVIDENCE_DIR, st.session_state["data_dir"])
             st.rerun()
 
 else:
     st.success("No exceptions needed human review -- close finalized automatically.")
+    _render_evidence()
     _render_eliminations(result.get("eliminations", []))
