@@ -21,6 +21,18 @@ booked.
 > each commit was made, committer dates are when the history was rebuilt.
 > [PROVENANCE.md](PROVENANCE.md) lists every change and how to check it.
 
+<!-- sample-results:start -->
+**Results on the sample data** (synthetic: 7 entities, 53 intercompany legs;
+the tests rerun the close offline and fail if these figures change):
+
+- 11 pairs match clean, and 18 balances become exceptions, of 8 different
+  types.
+- 16 of the 18 go to a reviewer. The other 2 are amount differences below
+  materiality between interfaced entities, proposed for auto-elimination.
+- 1 of 7 entities fails the control-account tie-out, a break the sample data
+  plants on purpose.
+<!-- sample-results:end -->
+
 ## Review in 5 minutes
 
 - §§1–2: the close problem and why tolerances, interfaced status and control
@@ -247,6 +259,13 @@ uv run streamlit run app/streamlit_app.py
 # run the test suite
 uv run pytest
 ```
+
+The sample run is meant to find problems, and the first one it reports is
+deliberate: one entity's intercompany subledger doesn't tie to its trial
+balance (`US01` with the default seed). The generator plants a posting that
+reached the GL but never the subledger, the everyday reason a control account
+won't tie at close, and the tie-out step catches it before anything is
+matched or eliminated.
 
 ## What's out of scope (for now)
 
