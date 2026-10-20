@@ -11,6 +11,13 @@ All notable changes to this project are logged here.
   test fails if the README and the run disagree.
 
 ### Fixed
+- The dashboard started every worklist item on approve, so pressing "Submit
+  decisions" without opening anything approved them all. On the sample data
+  that booked four eliminations as human-approved, three of them types that
+  are never auto-resolved, with an audit trail that read as if someone had
+  decided. Items start with no decision now, the worklist isn't submitted
+  until each has one, and `tests/test_dashboard.py` runs the page headless to
+  check both.
 - The README and `examples/README.md` didn't say that the control-account
   break in the sample run is planted, so a first-time reader could take it for
   a bug. Both say so now, and which entity it is with the default seed.

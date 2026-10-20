@@ -160,6 +160,11 @@ maps to a specific, auditable outcome in `finalize` (`graph/nodes.py`):
   currency -- there's no FX field anywhere in this model for the system to
   do that conversion itself.
 
+A decision has to be picked. The dashboard starts every item with none and
+won't submit the worklist until each one has one, so an item nobody opened
+can't reach `finalize` as an approval. Reject is the choice for an item that
+can't be settled yet: it books nothing, and the audit trail says so.
+
 Every path leaves a trail: which exceptions were auto-resolved and by what
 rule or model call, which were escalated, what a human decided and when.
 `ReviewDecision.decided_at` and the running `audit_trail` list exist so that
