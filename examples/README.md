@@ -20,6 +20,13 @@ generated with seed `14` specifically because it's one of the few seeds
 single run; see `src/intercompany_close_agent/synthetic/generator.py`'s
 `generate()` for why that seed and not the more obvious `42`.
 
+The run opens with a control-account tie-out break: `US01`'s intercompany
+subledger is -48894.96 against -46358.95 on its trial balance. That's planted.
+`build_trial_balance_rows()` in the generator adds a posting to one entity's GL
+that never reached its subledger, which is the everyday reason a control
+account won't tie at close, and the tie-out step reports it before anything is
+matched. Which entity it lands on depends on the seed.
+
 Several entries also carry a note that one of the entities involved keys
 its data in by hand -- that's `ZA01`, the group's non-interfaced entity,
 and triage surfaces it because a manually loaded balance is a weaker

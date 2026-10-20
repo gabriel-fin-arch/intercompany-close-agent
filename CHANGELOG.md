@@ -4,6 +4,12 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+### Added
+- A "Results on the sample data" block near the top of the README: what an
+  offline run on the committed dataset finds, in three lines.
+  `intercompany_close_agent.sample_results` computes it from a fresh run, and a
+  test fails if the README and the run disagree.
+
 ### Fixed
 - The dashboard started every worklist item on approve, so pressing "Submit
   decisions" without opening anything approved them all. On the sample data
@@ -12,6 +18,9 @@ All notable changes to this project are logged here.
   decided. Items start with no decision now, the worklist isn't submitted
   until each has one, and `tests/test_dashboard.py` runs the page headless to
   check both.
+- The README and `examples/README.md` didn't say that the control-account
+  break in the sample run is planted, so a first-time reader could take it for
+  a bug. Both say so now, and which entity it is with the default seed.
 - The commit history has its real dates. Every commit's author date is now the
   time it was made, taken from my Claude Code session logs, and no file
   changed. What each publishing rewrite changed in the files is a bridge
