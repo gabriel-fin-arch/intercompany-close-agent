@@ -25,7 +25,9 @@ def _field(elements, label: str):
     return next(element for element in elements if element.label == label)
 
 
-def _start(monkeypatch, workdir: Path, prepared_by: str = PREPARER, policy: str = "") -> AppTest:
+def _start(
+    monkeypatch, workdir: Path, prepared_by: str = PREPARER, policy: str = "", data: Path = DATA_DIR
+) -> AppTest:
     # Empty rather than unset: the app calls load_dotenv(), which leaves a
     # variable that is already set alone, so a local .env can't put the test
     # on the live model.
@@ -36,7 +38,7 @@ def _start(monkeypatch, workdir: Path, prepared_by: str = PREPARER, policy: str 
 
     app = AppTest.from_file(str(APP), default_timeout=60)
     app.run()
-    _field(app.sidebar.text_input, "Synthetic data directory").set_value(str(DATA_DIR))
+    _field(app.sidebar.text_input, "Data folder or workbook").set_value(str(data))
     _field(app.sidebar.text_input, "Prepared by").set_value(prepared_by)
     _field(app.sidebar.text_input, "Policy file").set_value(policy)
     _field(app.sidebar.button, "Run close pipeline").click().run()
@@ -177,3 +179,10 @@ def test_a_finalized_close_writes_its_evidence_pack_and_offers_it(dashboard: App
     assert len(rows) == count + 1
     assert all(f",reject,{REVIEWER}," in row for row in rows[1:])
     assert [button.proto.label for button in dashboard.get("download_button")] == ["Download evidence pack"]
+
+
+def test_the_close_runs_from_the_workbook_template(monkeypatch, tmp_path: Path):
+    app = _start(monkeypatch, tmp_path, data=ROOT / "examples" / "close_template.xlsx")
+
+    pending = app.session_state["result"]["__interrupt__"][0].value["pending_review"]
+    assert len(pending) == len(_decisions(app)) == 16

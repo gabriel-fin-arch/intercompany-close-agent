@@ -33,7 +33,12 @@ st.caption("Matching -> eliminations -> triage -> human review, for the intercom
 
 with st.sidebar:
     st.header("Run")
-    data_dir_input = st.text_input("Synthetic data directory", value=str(DEFAULT_DATA_DIR))
+    data_dir_input = st.text_input(
+        "Data folder or workbook",
+        value=str(DEFAULT_DATA_DIR),
+        help="A folder with entities.csv, trial_balance.csv and ic_ledger.csv, or an .xlsx workbook "
+        "with sheets of those names, like examples/close_template.xlsx.",
+    )
     prepared_by_input = st.text_input(
         "Prepared by",
         help="Who is preparing this close. It goes into the audit trail, and this person can't also "

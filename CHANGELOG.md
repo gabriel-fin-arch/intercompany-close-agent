@@ -5,6 +5,19 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- The inputs can be one Excel workbook instead of three CSVs: sheets named
+  entities, trial_balance and ic_ledger, with the same columns, read through
+  the same checks, with errors that name the sheet and row. A whole amount
+  that Excel hands back as an integer is written with two decimals, as in the
+  CSVs. `examples/close_template.xlsx` holds the sample, made by the new
+  `write-workbook` command, and a test checks it gives the same dataset and
+  the same `run` output as the CSVs. Needs openpyxl.
+- A close at the size of a real group: `generate-data` takes `--entities`
+  and `--anomaly-rate`, and `scale-run` generates 60 entities and 1,500
+  balances (3,005 ledger lines), closes them offline and times each step.
+  `docs/scale.md` has one run with its machine; a test checks its counts
+  against a fresh run, not its times. With the defaults, the committed sample
+  is unchanged byte for byte.
 - An evidence pack for every finalized close: one folder with who prepared
   and reviewed it, the policy, the code version, the SHA-256 of each input
   file, the tie-out, every exception with its triage rationale and decision,
