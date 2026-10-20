@@ -1,0 +1,585 @@
+{
+  "set_name": "labelled",
+  "triage": "model",
+  "model": "claude-opus-5-5",
+  "run_at": "2026-10-20T07:13:03+00:00",
+  "prices_as_of": "2026-10-18",
+  "cases": [
+    {
+      "id": "amount-low",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.7,
+        "rationale": "RECHARGE-2025-3001 is a clean two-leg pair. US01 holds a 12,000.00 USD receivable against DE01, and DE01 holds a -11,700.00 USD payable against US01. Both legs are in USD, dated 2025-09-26, booked on opposite sides, and point to the correct counterparties. Neither entity is flagged as manually loaded. The only issue is a 300.00 USD residual, rated low materiality. That is far above the 1.20 tolerance but immaterial in dollar terms at the consolidated level, so the elimination can be drafted automatically. Draft it to eliminate the matched 11,700.00 and post the 300.00 residual to the intercompany difference/suspense account rather than either entity's P&L. Because the gap is 2.5% of the balance, it likely reflects a specific item such as a markup, fee, or partial invoice. DE01/US01 owners should identify and correct it at source in the next cycle. Escalate if it recurs or grows."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 994,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 773,
+        "seconds": 13.458,
+        "cost_usd": "0.019436",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "amount-high",
+      "exception_type": "amount_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "MGMT-FEE-2025-3002 is an amount mismatch between US01 and GB01, both legs in USD dated 2025-09-30. US01 shows 250,000.00 and GB01 shows -238,000.00, leaving a 12,000.00 residual. That residual is far above the 25.00 tolerance, and materiality is flagged high, so it should not be eliminated automatically. Before booking anything, the reviewer should get the management fee agreement and invoice and work out which entity has the right amount. A 12,000 gap is about 4.8% of the fee, so likely causes include: a partial invoice or credit note; GB01 netting a withholding tax or VAT; or a fee recalculation or accrual true-up booked by only one side. The leg found to be wrong should be corrected at the entity level before the elimination is drafted."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1000,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 303,
+        "seconds": 4.575,
+        "cost_usd": "0.010060",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "amount-low-manual",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "RECHARGE-2025-3003: US01 receivable 8,000.00 USD vs ZA01 payable -7,600.00 USD (both 2025-09-24, same currency), leaving a 400.00 residual against a 1.00 tolerance. That is 5% of the balance, which is a real break rather than rounding. More importantly, ZA01 is flagged as manually loaded, so its -7,600.00 was keyed by hand and cannot be eliminated unreviewed regardless of materiality. Reviewer should check ZA01's source recharge invoice/journal for a keying error or a partial booking (e.g., missing 400.00 line, fee, or tax component), confirm the correct amount with US01, and correct the wrong leg before eliminating the full balance."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1010,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 282,
+        "seconds": 3.86,
+        "cost_usd": "0.009680",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "amount-at-threshold",
+      "exception_type": "amount_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "SUPPLY-2025-3004: IE01 records a 105,000.00 USD receivable from DE01, but DE01 records only a 100,000.00 USD payable to IE01. Both legs are dated 2025-09-18, so this is not a timing gap. The 5,000.00 residual is far above the 10.50 tolerance and is rated high materiality. It must not be auto-eliminated. Next steps: obtain the supporting invoice or agreement from both entities and confirm which amount is correct. Possible causes include an unbilled or partially billed charge, a markup or fee booked by IE01 only, a credit note recorded by DE01 only, or a keying error. Book the correcting entry in the entity that is wrong before drafting the elimination."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 998,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 275,
+        "seconds": 4.106,
+        "cost_usd": "0.009492",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "amount-below-threshold",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.8,
+        "rationale": "Amount mismatch with a residual of 4,999.99 USD. IE01 shows a receivable of 104,999.99 and DE01 shows a payable of -100,000.00, both in USD on 2025-09-18. The residual is about 476 times the 10.50 tolerance for a balance this size, so it is not genuinely immaterial despite the 'low' label. The amount sitting one cent under 5,000 is also worth a check against any approval or auto-clear thresholds. The structure is otherwise clean: same currency, same date, opposite signs, two legs and no manual-load flag. Reviewer actions: pull IE01's invoice or posting for SUPPLY-2025-3005 and DE01's matching entry, then determine whether the extra 4,999.99 is a separate charge (e.g., freight, a service fee or a price adjustment) that DE01 has not yet booked, or an error on IE01's side. Book the correcting entry in the right entity before eliminating. Do not plug the difference."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 998,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 527,
+        "seconds": 9.876,
+        "cost_usd": "0.014532",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "amount-payable-larger",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.68,
+        "rationale": "Two-leg amount mismatch on ROYALTY-2025-3006. The legs are BR01 receivable 40,000.00 USD and MX01 payable -41,250.00 USD. Both are booked on 2025-09-12 in the same currency with opposite signs and correct reciprocal counterparties. No entity is flagged as manually loaded, so there is no control red flag. The amount at stake is the 1,250.00 residual (about 3.1% of the balance), and the exception is rated low materiality, so it is eligible for an automatic elimination. Draft entry: eliminate 40,000.00 between BR01 and MX01, and post the -1,250.00 residual to the intercompany difference/suspense account. Confidence is moderate because the residual far exceeds the 4.125 tolerance and is a clean percentage of the balance. A reviewer should confirm with BR01/MX01 whether this reflects a royalty rate difference or Mexican withholding tax that MX01 accrued gross. If so, correct the source entries next period rather than leaving the residual in suspense."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 999,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 830,
+        "seconds": 9.585,
+        "cost_usd": "0.020596",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "amount-just-outside-tolerance",
+      "exception_type": "amount_mismatch",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.85,
+        "rationale": "Amount mismatch on LOAN-INT-2025-3007. The US01 receivable of 50,000.00 USD and the DE01 payable of -49,994.99 USD leave a residual of 5.01 USD, which is what's at stake. That residual is only 0.01 over the 5.00 tolerance and is rated low materiality. Both legs are in USD, dated 2025-09-30 and booked on opposite sides. They reference each other correctly, with no self-counterparty, third leg or manual-load flag. Safe to draft the elimination of the matched 49,994.99 and book the 5.01 difference to the standard intercompany rounding/variance account. The reviewer should confirm the 5.01 isn't a recurring interest-calculation difference (e.g. a day-count or rate rounding on the loan interest) that DE01 should true-up going forward."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 996,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 391,
+        "seconds": 8.835,
+        "cost_usd": "0.011804",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "timing-low",
+      "exception_type": "timing_gap",
+      "materiality": "low",
+      "expected": "auto_resolvable",
+      "raw": {
+        "classification": "auto_resolvable",
+        "confidence": 0.72,
+        "rationale": "Timing gap only. The legs agree in amount and currency, so the net is 0.00: GB01 shows a 3,000.00 USD receivable dated 2025-09-29, and IE01 shows the offsetting 3,000.00 USD payable dated 2025-10-02. For a timing gap the amount at stake is the full 3,000.00 USD balance, because IE01's leg falls in October. That balance is rated low materiality. None of the blocking conditions apply: both counterparties are booked, the entities are correct and distinct, the currency is the same, the legs sit on opposite sides, there are only two legs, and neither entity is flagged as manually loaded. Proposed treatment: draft a September cutoff accrual on the IE01 side for 3,000.00 USD so the balance eliminates in the 2025-09 consolidation, and reverse it in October when IE01's booking posts. The reviewer should confirm the 3,000.00 USD balance is below the close materiality threshold before posting. Separately, IE01's late booking should be flagged as a recurring cutoff issue."
+      },
+      "final": "auto_resolvable",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 996,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 604,
+        "seconds": 7.216,
+        "cost_usd": "0.016064",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "timing-high",
+      "exception_type": "timing_gap",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "Timing gap across the September close cutoff: US01 booked 50,000.00 USD on 2025-09-30, but MX01 booked its offsetting -50,000.00 USD on 2025-10-01. The net is 0.00 across periods, but for a timing gap the amount at stake is the full 50,000.00 balance, flagged high materiality, so this is not immaterial. In the September consolidation the US01 balance has no MX01 counterpart. The reviewer should confirm which period the underlying service/charge belongs to. Then either have MX01 accrue it in 2025-09, or decide whether US01's entry should move to October. Also determine whether a cutoff accrual or reclass is needed before eliminating. Do not auto-eliminate."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 993,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 274,
+        "seconds": 4.187,
+        "cost_usd": "0.009452",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "timing-low-manual",
+      "exception_type": "timing_gap",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.95,
+        "rationale": "Timing gap on SVC-2025-3010. The amount at stake is the full 2,500.00 USD balance, not the 0.00 net, because the two legs fall in different periods. GB01 booked -2,500.00 USD on 2025-09-30 (September) and ZA01 booked 2,500.00 USD on 2025-10-03 (October), so the balance straddles the close cutoff. ZA01 is also flagged as manually loaded, which on its own requires human review regardless of amount. Reviewer should: (1) confirm with ZA01 that its hand-keyed entry and its date are correct against source documents; (2) decide which period the transaction belongs to; (3) either have ZA01 accrue the item in 2025-09, or have GB01 reverse and rebook it in 2025-10, so that both legs eliminate in the same period."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1014,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 305,
+        "seconds": 5.36,
+        "cost_usd": "0.010156",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "missing-low",
+      "exception_type": "missing_counterparty",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Missing counterparty booking: DE01 recorded an $800.00 USD recharge against GB01 on 2025-09-22 under RECHARGE-2025-3011, but GB01 has no mirror leg. Per policy, missing counterparty exceptions always need human review, whatever the amount. Do not eliminate. Ask GB01 whether the recharge was received and booked under a different reference, is still pending (accrue it in the current period if it belongs there), or is disputed or invalid. If GB01 does not recognize it, reverse it at DE01."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 961,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 211,
+        "seconds": 6.575,
+        "cost_usd": "0.008064",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "missing-high",
+      "exception_type": "missing_counterparty",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.98,
+        "rationale": "Missing counterparty booking: US01 recorded -75,000.00 USD against BR01 on 2025-09-15 under LOAN-2025-3012, and BR01 has no mirror leg. Per policy, missing counterparty exceptions always need human judgment, and this one is also high materiality. Reviewer should confirm with BR01 whether the loan was recorded under a different reference, in a different period, or not at all. Also check whether BR01 would book it in BRL, which would create a currency difference to reconcile. Do not eliminate until both legs are confirmed."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 958,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 215,
+        "seconds": 4.945,
+        "cost_usd": "0.008132",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "missing-manual-side",
+      "exception_type": "missing_counterparty",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Missing counterparty booking always requires human review, regardless of amount. US01 recorded a 1,200.00 USD management fee against ZA01 on 2025-09-30, but there is no mirror leg under MGMT-FEE-2025-3013. ZA01 is also flagged as manually loaded, which is a second reason for review. The reviewer should confirm with ZA01 whether the fee was booked under a different reference, was posted in a different period, or was never recorded. Then decide whether ZA01 needs to book the payable before eliminating, or whether US01's entry should be reversed. Do not draft an elimination until both legs exist."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 982,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 237,
+        "seconds": 4.423,
+        "cost_usd": "0.008668",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "counterparty-low",
+      "exception_type": "counterparty_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Counterparty mismatch on RECHARGE-2025-3014: US01 booked a 2,000.00 USD receivable against DE01, but DE01 booked the offsetting -2,000.00 USD against GB01 rather than US01. A balance booked against the wrong entity always needs human review, whatever the amount. The zero net and matching date do not make the pairing valid. Reviewer should confirm with DE01 and GB01 whether the recharge truly relates to US01. If it does, DE01 should reclass its payable from GB01 to US01 before elimination. If GB01 is a genuine party, the US01 leg and any GB01 booking need investigation. Check GB01 for an unmatched corresponding entry. Do not draft an elimination until the counterparty is corrected."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 994,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 285,
+        "seconds": 7.442,
+        "cost_usd": "0.009676",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "counterparty-high",
+      "exception_type": "counterparty_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Counterparty mismatch on SUPPLY-2025-3015: GB01 booked a 60,000.00 USD receivable against IE01, but IE01 booked the offsetting -60,000.00 USD against DE01 rather than GB01. A balance booked against the wrong entity always needs human review, whatever the amount. The net of zero is misleading because the legs do not pair between the same two entities, so eliminating them would leave GB01/IE01 and IE01/DE01 intercompany positions misstated. Materiality is high (60,000.00 USD). Reviewer should confirm the true counterparty to the transaction with IE01 and GB01 (and DE01 if relevant), have IE01 reclass its entry to GB01 if it was miscoded, and eliminate only once both legs reference the same entity pair."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 997,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 297,
+        "seconds": 8.257,
+        "cost_usd": "0.009928",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "sign-low",
+      "exception_type": "sign_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Sign mismatch: BR01 and MX01 each booked the ROYALTY-2025-3016 balance of 1,500.00 USD (dated 2025-09-10) as a receivable, so the gross break is 3,000.00. Materiality is low, but policy requires human review for same-side bookings at any amount, because the ledger cannot show which entity has the sign backwards. Next step: confirm the direction of the royalty under the license agreement or invoice, likely MX01 paying BR01 or the reverse. Then have the entity that should carry the payable reverse its receivable and rebook it as a payable. Once corrected, the 1,500.00 balance will net to zero and can be eliminated normally."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1013,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 259,
+        "seconds": 8.567,
+        "cost_usd": "0.009232",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "sign-high",
+      "exception_type": "sign_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "SUPPLY-2025-3017 is a sign mismatch, which always needs a human regardless of amount. DE01 and IE01 both booked a payable of -20,000.00 USD on 2025-09-23, leaving a net of -40,000.00 USD that is flagged high materiality. A valid intercompany balance needs one receivable and one payable, and the ledger cannot show which entity reversed its sign. The reviewer should get the underlying supply invoice or agreement to confirm which entity is the supplier (it should hold the receivable). That entity's controller should then reverse and rebook its leg as a +20,000.00 receivable before the elimination is drafted. Do not eliminate until the corrected legs net to zero."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1013,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 266,
+        "seconds": 4.113,
+        "cost_usd": "0.009372",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "currency-low",
+      "exception_type": "currency_mismatch",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "SVC-2025-3018 is a currency mismatch: GB01 booked 900.00 GBP and US01 booked -900.00 USD, both on 2025-09-17. Different-currency legs always need review, whatever the materiality flag says. The matching 900 figure suggests one entity keyed the GBP amount without translating it. At a typical GBP/USD rate, 900 GBP is roughly $1,100-1,250, so treating the legs as offsetting would leave an unexplained residual of about $200-350. Reviewer should: (1) check the service invoice/contract to confirm the transaction currency; (2) identify which entity (likely US01) recorded the face amount in the wrong currency; (3) have that entity correct the entry using the 2025-09-17 transaction-date rate; (4) eliminate only once both legs agree in the reporting currency, booking any remaining difference as FX revaluation rather than forcing the elimination."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1001,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 336,
+        "seconds": 6.297,
+        "cost_usd": "0.010724",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "currency-high",
+      "exception_type": "currency_mismatch",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.98,
+        "rationale": "Currency mismatch on LOAN-INT-2025-3019: DE01 recorded a 30,000.00 EUR receivable from US01, and US01 recorded a -30,000.00 USD payable to DE01, both dated 2025-09-30. Mismatched currencies always go to a reviewer, regardless of amount. The figures match numerically but are in different currencies, so the residual cannot be measured without an FX rate. At roughly 1.17 USD/EUR on 9/30, the legs would differ by about $5k, which may be an FX gap or a booking error. Reviewer should: (1) check the loan agreement for the interest currency of record; (2) find out whether US01 converted at the right rate, or keyed the EUR amount as USD by mistake; (3) confirm the 9/30 closing rate and decide which entity carries the FX remeasurement gain or loss under ASC 830 before any elimination is drafted. Materiality is flagged high."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1011,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 343,
+        "seconds": 7.626,
+        "cost_usd": "0.010904",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "self-dealing-low",
+      "exception_type": "self_dealing",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "MX01 is booked as its own counterparty on RECHARGE-2025-3020 (700.00 USD, 2025-09-08). Self-dealing always needs human review, whatever the amount, so the low materiality does not change this. This is most likely a counterparty mapping error rather than a real intercompany balance. Reviewer should: (1) pull the source recharge document and identify which entity MX01 actually billed or was billed by; (2) correct the counterparty code on the MX01 entry; (3) confirm the true counterparty has booked the matching leg; (4) eliminate only once a proper two-entity pair exists. If no real counterparty exists, reverse the entry as a non-intercompany posting rather than eliminating it."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 969,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 267,
+        "seconds": 4.078,
+        "cost_usd": "0.009216",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "self-dealing-high",
+      "exception_type": "self_dealing",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Self-dealing exception: both legs of MGMT-FEE-2025-3021 are booked US01 vs US01 (+15,000.00 / -15,000.00 USD, 2025-09-30). An entity booked as its own counterparty always requires human review, regardless of amount. The zero net does not make this safe to eliminate. It likely reflects a counterparty mapping error, meaning the real intercompany partner for this management fee is missing and its books may be wrong or incomplete. Reviewer should: (1) confirm which entity actually charged or received the management fee; (2) correct the counterparty code on the US01 entries; (3) verify the true counterparty has the matching leg booked. Eliminate only after that. Materiality is flagged high."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 996,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 273,
+        "seconds": 4.86,
+        "cost_usd": "0.009444",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "duplicate-low",
+      "exception_type": "duplicate_reference",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Reference RECHARGE-2025-3022 has 3 legs instead of 2: US01 receivable +1,000.00 USD (2025-09-16) and two DE01 payables of -1,000.00 USD (2025-09-16 and 2025-09-17), leaving a net -1,000.00. A reference shared by more than two legs always needs human review, whatever the materiality. The pattern looks like a duplicate DE01 posting a day later, but it could also be a second genuine recharge whose US01 side was never booked. A reviewer should check with DE01 whether the 2025-09-17 entry is a re-post. If it is a duplicate, DE01 should reverse it and the remaining pair can be eliminated. If it is a real second charge, US01 needs to book its receivable under a distinct reference. Nothing should be eliminated until that is resolved."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1005,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 309,
+        "seconds": 4.036,
+        "cost_usd": "0.010200",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "duplicate-high",
+      "exception_type": "duplicate_reference",
+      "materiality": "high",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.98,
+        "rationale": "Reference SUPPLY-2025-3023 is shared by 3 legs instead of 2, and a reference shared by more than two legs always needs human review regardless of amount. GB01 booked +40,000.00 USD against IE01 twice: once on 2025-09-29 and again on 2025-09-30. IE01 has only one offsetting leg of -40,000.00 USD on 2025-09-29. The likely cause is a duplicate GB01 posting on 9/30, which leaves a 40,000.00 USD high-materiality residual, but that is not confirmed. Reviewer should check GB01 source documents and invoices to see whether the 9/30 leg is a true duplicate or a separate transaction. If it is a duplicate, reverse it in GB01. If it is a real transaction, it needs its own reference and a matching IE01 booking. Do not eliminate until the third leg is resolved."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1007,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 324,
+        "seconds": 7.688,
+        "cost_usd": "0.010508",
+        "prices_as_of": "2026-10-18"
+      }
+    },
+    {
+      "id": "duplicate-nets-to-zero",
+      "exception_type": "duplicate_reference",
+      "materiality": "low",
+      "expected": "needs_human_judgment",
+      "raw": {
+        "classification": "needs_human_judgment",
+        "confidence": 0.97,
+        "rationale": "Reference LOAN-2025-3024 has 4 legs where exactly 2 are expected. Legs shared by more than two entries always need human review, whatever the net amount. The legs form two matched pairs of US01 +500,000.00 USD / IE01 -500,000.00 USD, one pair dated 2025-09-01 and the other 2025-09-02. This pattern points to a possible double-posting of a single loan on consecutive days, which would overstate the intercompany loan by 500,000.00. It could also be two genuine separate drawdowns booked under one reference. The zero net does not show the balance is correct, because a duplicate would eliminate cleanly while both entities' standalone books stay overstated. Reviewer should check the loan agreement and treasury/bank records for the number of drawdowns on 9/1 and 9/2. If it was one drawdown, reverse the duplicate pair in both US01 and IE01. If it was two, re-reference one pair with a unique loan ID before eliminating."
+      },
+      "final": "needs_human_judgment",
+      "overridden": false,
+      "error": null,
+      "call": {
+        "model": "claude-opus-5-5",
+        "input_tokens": 1025,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 357,
+        "seconds": 5.699,
+        "cost_usd": "0.011240",
+        "prices_as_of": "2026-10-18"
+      }
+    }
+  ]
+}
