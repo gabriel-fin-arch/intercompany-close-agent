@@ -4,6 +4,12 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+### Added
+- A "Results on the sample data" block near the top of the README: what an
+  offline run on the committed dataset finds, in three lines.
+  `intercompany_close_agent.sample_results` computes it from a fresh run, and a
+  test fails if the README and the run disagree.
+
 ### Fixed
 - The README and `examples/README.md` didn't say that the control-account
   break in the sample run is planted, so a first-time reader could take it for
