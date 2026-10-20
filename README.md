@@ -277,6 +277,14 @@ uv run pytest
 uv run pre-commit install
 ```
 
+Or without Python or uv, with Docker: the image runs the same offline close
+on the committed sample, and the dashboard on request (see the `Dockerfile`).
+
+```
+docker build -t intercompany-close-agent .
+docker run --rm intercompany-close-agent
+```
+
 The sample run is meant to find problems, and the first one it reports is
 deliberate: one entity's intercompany subledger doesn't tie to its trial
 balance (`US01` with the default seed). The generator plants a posting that
