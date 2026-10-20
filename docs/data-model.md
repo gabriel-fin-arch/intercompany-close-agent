@@ -72,14 +72,17 @@ class TriageResult(TriageJudgment):
 ## Review output
 
 **`ReviewDecision`** (`models/review.py`) -- a human reviewer's decision on
-one exception. `override_amount` is only meaningful for `action=edit`, and
-`decided_at` defaults to the current UTC time so every decision carries its
-own timestamp without the caller having to remember to set one.
+one exception. `reviewer` is required: every decision says who made it, and
+`finalize` won't book one made by whoever prepared the run.
+`override_amount` is only meaningful for `action=edit`, and `decided_at`
+defaults to the current UTC time so every decision carries its own timestamp
+without the caller having to remember to set one.
 
 ```python
 class ReviewDecision(BaseModel):
     reference: str
     action: ReviewAction              # approve | reject | edit
+    reviewer: str                     # typed in, not authenticated
     reviewer_note: str = ""
     override_amount: Decimal | None = None
     decided_at: datetime

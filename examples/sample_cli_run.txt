@@ -2,6 +2,8 @@ Triage mode: offline rule-based fallback
 Loaded 7 entities, 53 IC transaction legs
 
 === Audit trail ===
+  - prepared by example preparer
+  - policy (built-in defaults): materiality threshold 5000.00; matching tolerance the larger of 1.00 and 0.01% of the larger leg; tie-out tolerance 1.00
   - ingested 53 IC transaction legs
   - control account tie-out: 1 of 7 entities do not tie
   -   US01: subledger -48894.96 vs TB -46358.95 (variance -2536.01)

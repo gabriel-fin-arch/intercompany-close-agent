@@ -9,12 +9,20 @@ from __future__ import annotations
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from intercompany_close_agent.graph.graph import build_graph, resume_close, run_close
 from intercompany_close_agent.ingest.loaders import load_ic_transactions, load_trial_balance
 from intercompany_close_agent.models.exception import ExceptionType
 from intercompany_close_agent.models.review import ReviewAction
+from intercompany_close_agent.policy import ClosePolicy
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "synthetic"
+
+# Two different people: finalize refuses a decision by whoever prepared the run.
+PREPARER = "Ana Ruiz"
+REVIEWER = "Ben Okafor"
 
 
 def _load_real_data():
@@ -37,7 +45,7 @@ def test_run_pauses_for_human_review_on_real_dataset(monkeypatch):
 
     entities, trial_balance, transactions = _load_real_data()
 
-    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-1")
+    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-1", prepared_by=PREPARER)
 
     # the synthetic dataset has real exceptions in it (missing-counterparty,
     # amount-mismatch, ...), so this run should hit the interrupt
@@ -54,12 +62,19 @@ def test_resume_with_decisions_produces_final_eliminations(monkeypatch):
 
     entities, trial_balance, transactions = _load_real_data()
 
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-2")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-2", prepared_by=PREPARER
+    )
     assert "__interrupt__" in result
 
     pending = result["__interrupt__"][0].value["pending_review"]
     decisions = [
-        {"reference": item["reference"], "action": ReviewAction.APPROVE.value, "reviewer_note": "test approval"}
+        {
+            "reference": item["reference"],
+            "reviewer": REVIEWER,
+            "action": ReviewAction.APPROVE.value,
+            "reviewer_note": "test approval",
+        }
         for item in pending
     ]
 
@@ -77,14 +92,18 @@ def test_rejecting_a_decision_excludes_it_from_eliminations(monkeypatch):
 
     entities, trial_balance, transactions = _load_real_data()
 
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-3")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-3", prepared_by=PREPARER
+    )
     pending = result["__interrupt__"][0].value["pending_review"]
 
     # reject the first one, approve the rest
     decisions = []
     for i, item in enumerate(pending):
         action = ReviewAction.REJECT.value if i == 0 else ReviewAction.APPROVE.value
-        decisions.append({"reference": item["reference"], "action": action, "reviewer_note": "test"})
+        decisions.append(
+            {"reference": item["reference"], "reviewer": REVIEWER, "action": action, "reviewer_note": "test"}
+        )
 
     final = resume_close(graph, config, decisions)
 
@@ -99,7 +118,9 @@ def test_approving_a_missing_counterparty_with_an_amount_books_it(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-5")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-5", prepared_by=PREPARER
+    )
 
     one_legged = {exc.reference for exc in result["exceptions"] if len(exc.legs) == 1}
     assert one_legged, "the synthetic dataset should contain at least one missing counterparty"
@@ -112,13 +133,16 @@ def test_approving_a_missing_counterparty_with_an_amount_books_it(monkeypatch):
             decisions.append(
                 {
                     "reference": target,
+                    "reviewer": REVIEWER,
                     "action": ReviewAction.APPROVE.value,
                     "reviewer_note": "confirmed with the affiliate",
                     "override_amount": "5000.00",
                 }
             )
         else:
-            decisions.append({"reference": item["reference"], "action": ReviewAction.REJECT.value})
+            decisions.append(
+                {"reference": item["reference"], "reviewer": REVIEWER, "action": ReviewAction.REJECT.value}
+            )
 
     final = resume_close(graph, config, decisions)
 
@@ -139,7 +163,9 @@ def test_approving_with_a_non_positive_override_is_not_booked(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-neg-override")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-neg-override", prepared_by=PREPARER
+    )
 
     one_legged = {exc.reference for exc in result["exceptions"] if len(exc.legs) == 1}
     assert one_legged, "the synthetic dataset should contain at least one missing counterparty"
@@ -152,13 +178,16 @@ def test_approving_with_a_non_positive_override_is_not_booked(monkeypatch):
             decisions.append(
                 {
                     "reference": target,
+                    "reviewer": REVIEWER,
                     "action": ReviewAction.EDIT.value,
                     "reviewer_note": "fat-fingered a negative",
                     "override_amount": "-5000.00",
                 }
             )
         else:
-            decisions.append({"reference": item["reference"], "action": ReviewAction.REJECT.value})
+            decisions.append(
+                {"reference": item["reference"], "reviewer": REVIEWER, "action": ReviewAction.REJECT.value}
+            )
 
     final = resume_close(graph, config, decisions)
 
@@ -175,15 +204,16 @@ def test_approving_a_missing_counterparty_without_an_amount_is_not_booked(monkey
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-6")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-6", prepared_by=PREPARER
+    )
 
     one_legged = {exc.reference for exc in result["exceptions"] if len(exc.legs) == 1}
     target = sorted(one_legged)[0]
 
     pending = result["__interrupt__"][0].value["pending_review"]
     decisions = [
-        {"reference": item["reference"], "action": ReviewAction.APPROVE.value}
-        for item in pending
+        {"reference": item["reference"], "reviewer": REVIEWER, "action": ReviewAction.APPROVE.value} for item in pending
     ]
 
     final = resume_close(graph, config, decisions)
@@ -210,7 +240,7 @@ def test_every_checkpointed_type_is_declared_to_the_serializer(monkeypatch):
 
     # Walk a real paused state and check nothing in it is missing from the list.
     entities, trial_balance, transactions = _load_real_data()
-    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-serde")
+    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-serde", prepared_by=PREPARER)
 
     declared = {name for _module, name in allowlist}
     seen: set[str] = set()
@@ -242,7 +272,9 @@ def test_currency_mismatch_approved_without_an_override_is_not_booked(monkeypatc
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-currency-1")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-currency-1", prepared_by=PREPARER
+    )
     assert "__interrupt__" in result
 
     currency_mismatches = {
@@ -254,7 +286,12 @@ def test_currency_mismatch_approved_without_an_override_is_not_booked(monkeypatc
     assert any(item["reference"] in currency_mismatches and item["net_amount"] is None for item in pending)
 
     decisions = [
-        {"reference": item["reference"], "action": ReviewAction.APPROVE.value, "reviewer_note": "test"}
+        {
+            "reference": item["reference"],
+            "reviewer": REVIEWER,
+            "action": ReviewAction.APPROVE.value,
+            "reviewer_note": "test",
+        }
         for item in pending
     ]
     final = resume_close(graph, config, decisions)
@@ -275,7 +312,9 @@ def test_currency_mismatch_with_an_override_amount_is_booked(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-currency-2")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-currency-2", prepared_by=PREPARER
+    )
 
     target = next(
         exc.reference for exc in result["exceptions"] if exc.exception_type == ExceptionType.CURRENCY_MISMATCH
@@ -288,13 +327,16 @@ def test_currency_mismatch_with_an_override_amount_is_booked(monkeypatch):
             decisions.append(
                 {
                     "reference": target,
+                    "reviewer": REVIEWER,
                     "action": ReviewAction.EDIT.value,
                     "reviewer_note": "converted at the confirmed month-end rate",
                     "override_amount": "50000.00",
                 }
             )
         else:
-            decisions.append({"reference": item["reference"], "action": ReviewAction.REJECT.value})
+            decisions.append(
+                {"reference": item["reference"], "reviewer": REVIEWER, "action": ReviewAction.REJECT.value}
+            )
 
     final = resume_close(graph, config, decisions)
 
@@ -315,7 +357,9 @@ def test_sign_mismatch_never_auto_resolves_and_is_never_booked_on_approval(monke
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-7")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-7", prepared_by=PREPARER
+    )
 
     sign_mismatch_refs = {
         exc.reference for exc in result["exceptions"] if exc.exception_type == ExceptionType.SIGN_MISMATCH
@@ -327,7 +371,12 @@ def test_sign_mismatch_never_auto_resolves_and_is_never_booked_on_approval(monke
     assert sign_mismatch_refs.issubset(pending_refs)
 
     decisions = [
-        {"reference": item["reference"], "action": ReviewAction.APPROVE.value, "reviewer_note": "test approval"}
+        {
+            "reference": item["reference"],
+            "reviewer": REVIEWER,
+            "action": ReviewAction.APPROVE.value,
+            "reviewer_note": "test approval",
+        }
         for item in pending
     ]
     final = resume_close(graph, config, decisions)
@@ -350,19 +399,24 @@ def test_finalize_surfaces_a_control_account_residual_left_by_an_elimination(mon
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-9")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-9", prepared_by=PREPARER
+    )
     assert "__interrupt__" in result
 
     amount_mismatches = [exc for exc in result["exceptions"] if exc.exception_type == ExceptionType.AMOUNT_MISMATCH]
-    target_exc = next(
-        (exc for exc in amount_mismatches if abs(exc.legs[0].amount) != abs(exc.legs[1].amount)), None
-    )
+    target_exc = next((exc for exc in amount_mismatches if abs(exc.legs[0].amount) != abs(exc.legs[1].amount)), None)
     assert target_exc is not None, "fixture dataset should contain an amount mismatch with a genuine residual"
     payable_leg = next(leg for leg in target_exc.legs if leg.amount < 0)
 
     pending = result["__interrupt__"][0].value["pending_review"]
     decisions = [
-        {"reference": item["reference"], "action": ReviewAction.APPROVE.value, "reviewer_note": "test"}
+        {
+            "reference": item["reference"],
+            "reviewer": REVIEWER,
+            "action": ReviewAction.APPROVE.value,
+            "reviewer_note": "test",
+        }
         for item in pending
     ]
     final = resume_close(graph, config, decisions)
@@ -382,7 +436,7 @@ def test_missing_counterparty_never_auto_resolves(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-4")
+    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-4", prepared_by=PREPARER)
 
     missing_counterparty_refs = {
         exc.reference for exc in result["exceptions"] if exc.exception_type == ExceptionType.MISSING_COUNTERPARTY
@@ -402,16 +456,183 @@ def test_finalize_records_what_a_within_tolerance_clean_pair_leaves_behind(monke
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
 
     entities, trial_balance, transactions = _load_real_data()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="test-thread-tolerance")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-thread-tolerance", prepared_by=PREPARER
+    )
     off_by_a_little = [(a, b) for a, b in result["clean_pairs"] if a.amount + b.amount != 0]
     assert off_by_a_little, "fixture dataset should contain a clean pair that nets to within tolerance, not zero"
     leg_a, leg_b = off_by_a_little[0]
     payable = leg_a if leg_a.amount < 0 else leg_b
 
     pending = result["__interrupt__"][0].value["pending_review"]
-    final = resume_close(graph, config, [{"reference": item["reference"], "action": "reject"} for item in pending])
+    final = resume_close(
+        graph, config, [{"reference": item["reference"], "reviewer": REVIEWER, "action": "reject"} for item in pending]
+    )
 
     assert any(
         leg_a.reference in entry and "within tolerance" in entry and payable.entity_code in entry
         for entry in final["audit_trail"]
     )
+
+
+def _pending(result) -> list[dict]:
+    return result["__interrupt__"][0].value["pending_review"]
+
+
+def _offline(monkeypatch) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+
+
+def test_the_audit_trail_opens_with_the_preparer_and_the_policy(monkeypatch):
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+
+    _, _, result = run_close(transactions, trial_balance, entities, thread_id="test-trail", prepared_by=" Ana  Ruiz ")
+
+    assert result["audit_trail"][:2] == [
+        "prepared by Ana Ruiz",
+        "policy (built-in defaults): materiality threshold 5000.00; matching tolerance the larger of "
+        "1.00 and 0.01% of the larger leg; tie-out tolerance 1.00",
+    ]
+
+
+def test_a_run_needs_someone_to_have_prepared_it(monkeypatch):
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+
+    with pytest.raises(ValueError, match="prepared_by is required"):
+        run_close(transactions, trial_balance, entities, thread_id="test-no-preparer", prepared_by="  ")
+
+
+def test_a_decision_needs_someone_to_have_made_it(monkeypatch):
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-no-reviewer", prepared_by=PREPARER
+    )
+
+    with pytest.raises(ValidationError, match="reviewer"):
+        resume_close(graph, config, [{"reference": item["reference"], "action": "reject"} for item in _pending(result)])
+
+
+def test_an_approval_names_who_gave_it(monkeypatch):
+    """The README says the audit trail shows what was eliminated and approved
+    by whom. Until decisions carried a reviewer, it showed only that someone
+    had."""
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-named-approval", prepared_by=PREPARER
+    )
+    target = "RECHARGE-2025-1000"
+    decisions = [
+        {
+            "reference": item["reference"],
+            "reviewer": REVIEWER,
+            "action": "approve" if item["reference"] == target else "reject",
+        }
+        for item in _pending(result)
+    ]
+
+    final = resume_close(graph, config, decisions)
+
+    [approved] = [e for e in final["eliminations"] if e.reference == target]
+    assert f"human-approved (approve) by {REVIEWER}" in approved.narrative
+    assert f"received {len(decisions)} human review decisions from {REVIEWER}" in final["audit_trail"]
+
+
+def test_the_preparer_cannot_approve_what_the_run_books(monkeypatch):
+    """Segregation of duties, enforced where the booking happens rather than
+    only in the dashboard: an approval from the preparer, however the name is
+    capitalised or spaced, books nothing and says why."""
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-segregation", prepared_by=PREPARER
+    )
+    target = "RECHARGE-2025-1000"
+    decisions = [
+        {
+            "reference": item["reference"],
+            "reviewer": "  ana   RUIZ " if item["reference"] == target else REVIEWER,
+            "action": "approve" if item["reference"] == target else "reject",
+        }
+        for item in _pending(result)
+    ]
+
+    final = resume_close(graph, config, decisions)
+
+    assert target not in {e.reference for e in final["eliminations"]}
+    assert any(
+        entry.startswith(f"{target}: approve by ana   RUIZ, who prepared this run; not booked")
+        for entry in final["audit_trail"]
+    )
+
+
+def test_the_example_policy_file_is_the_default_close(monkeypatch):
+    """examples/policy.toml spells out the defaults, so running with it has to
+    give exactly the close that running without a policy gives."""
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+    example = ClosePolicy.from_toml(Path(__file__).resolve().parent.parent / "examples" / "policy.toml")
+
+    _, _, without = run_close(transactions, trial_balance, entities, thread_id="test-default-1", prepared_by=PREPARER)
+    _, _, with_example = run_close(
+        transactions, trial_balance, entities, thread_id="test-default-2", prepared_by=PREPARER, policy=example
+    )
+
+    def outcome(result):
+        return (
+            [(a.reference, b.reference) for a, b in result["clean_pairs"]],
+            [(e.reference, e.exception_type, e.materiality) for e in result["exceptions"]],
+            [item["reference"] for item in _pending(result)],
+            [(v.entity_code, v.within_tolerance) for v in result["tb_variances"]],
+        )
+
+    assert outcome(without) == outcome(with_example)
+    assert (len(without["clean_pairs"]), len(without["exceptions"]), len(_pending(without))) == (11, 18, 16)
+
+
+def test_a_higher_materiality_threshold_sends_less_to_a_person(monkeypatch):
+    """LOAN-INT-2025-1022 is a timing gap on a balance of 142,472.27. Above the
+    default threshold it goes to a reviewer; under a 200,000 one it is
+    auto-resolved like any immaterial timing gap."""
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+    target = "LOAN-INT-2025-1022"
+
+    _, _, default = run_close(transactions, trial_balance, entities, thread_id="test-mat-1", prepared_by=PREPARER)
+    _, _, loose = run_close(
+        transactions,
+        trial_balance,
+        entities,
+        thread_id="test-mat-2",
+        prepared_by=PREPARER,
+        policy=ClosePolicy(materiality_threshold=Decimal("200000")),
+    )
+
+    assert target in {item["reference"] for item in _pending(default)}
+    assert target not in {item["reference"] for item in _pending(loose)}
+    assert len(_pending(loose)) == len(_pending(default)) - 1
+
+
+def test_the_tolerance_floor_moves_the_tie_out_and_the_matching_together(monkeypatch):
+    """US01's control account is off by 2,536.01 and LOAN-INT-2025-1019's legs
+    by 1,156.76. A floor of 3,000 absorbs both: the tie-out uses the same floor
+    as matching, by design."""
+    _offline(monkeypatch)
+    entities, trial_balance, transactions = _load_real_data()
+
+    _, _, result = run_close(
+        transactions,
+        trial_balance,
+        entities,
+        thread_id="test-floor",
+        prepared_by=PREPARER,
+        policy=ClosePolicy(amount_tolerance_floor=Decimal("3000")),
+    )
+
+    assert all(v.within_tolerance for v in result["tb_variances"])
+    assert "LOAN-INT-2025-1019" in {a.reference for a, _ in result["clean_pairs"]}
+    assert "LOAN-INT-2025-1019" not in {e.reference for e in result["exceptions"]}

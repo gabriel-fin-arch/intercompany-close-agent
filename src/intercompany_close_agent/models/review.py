@@ -3,6 +3,11 @@
 Every decision is logged, whichever way it goes -- approve, reject, or edit
 the proposed amount -- so the close has an audit trail of who decided what,
 not just what ended up booked.
+
+Names are typed in, not authenticated. They make the run's record say who
+prepared it and who decided each item, and let finalize refuse a decision by
+the preparer; they don't stop anyone typing someone else's name. That needs
+the group's own sign-in, which this project doesn't have.
 """
 
 from __future__ import annotations
@@ -10,8 +15,21 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
+
+PersonName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+def same_person(a: str, b: str) -> bool:
+    """Whether two typed names are the same person, as far as text can tell.
+
+    Case and spacing don't count, so "Ana Ruiz" and "ana  ruiz" are one
+    person. Anything more (initials, nicknames) is beyond what a name typed
+    into a form can show.
+    """
+    return " ".join(a.split()).casefold() == " ".join(b.split()).casefold()
 
 
 def parse_override_amount(raw: str | None) -> Decimal | None:
@@ -45,6 +63,7 @@ class ReviewAction(StrEnum):
 class ReviewDecision(BaseModel):
     reference: str
     action: ReviewAction
+    reviewer: PersonName = Field(description="Who made the decision. Must not be who prepared the run.")
     reviewer_note: str = ""
     override_amount: Decimal | None = Field(
         default=None,

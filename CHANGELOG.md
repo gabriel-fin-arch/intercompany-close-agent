@@ -5,12 +5,29 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- A close policy file. The materiality threshold and the matching tolerance
+  were constants in `matching/engine.py`; they're read from a TOML file now,
+  passed with `run --policy` or the dashboard's Policy file field, and each
+  run writes the policy it applied, and where it came from, at the top of its
+  audit trail. Without a file the defaults are the old values, and
+  `examples/policy.toml` spells them out; a test checks that it gives the same
+  close as no file at all.
+- Preparer and reviewer. A run records who prepared it (`run --prepared-by`,
+  by default the login name; a required field in the dashboard), every
+  decision records who made it, and `finalize` doesn't book an approval or
+  edit by the preparer: it stays unbooked with the reason in the audit trail.
+  The dashboard refuses such a reviewer before anything is submitted. Names
+  are typed, not authenticated, and `docs/human-in-the-loop.md` says so.
 - A "Results on the sample data" block near the top of the README: what an
   offline run on the committed dataset finds, in three lines.
   `intercompany_close_agent.sample_results` computes it from a fresh run, and a
   test fails if the README and the run disagree.
 
 ### Fixed
+- The README said the audit trail shows what was eliminated and "approved by
+  whom", and `docs/human-in-the-loop.md` that the narrative records who
+  approved it. Nothing recorded a name. An approved elimination's narrative
+  now says "human-approved (approve) by" and the reviewer's name.
 - The dashboard started every worklist item on approve, so pressing "Submit
   decisions" without opening anything approved them all. On the sample data
   that booked four eliminations as human-approved, three of them types that

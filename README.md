@@ -236,11 +236,14 @@ uv run python -m intercompany_close_agent.cli generate-data
 # run the close pipeline end to end, offline
 uv run python -m intercompany_close_agent.cli run
 
+# same, with your group's materiality and tolerances (this file has the defaults)
+uv run python -m intercompany_close_agent.cli run --policy examples/policy.toml
+
 # same, but with live Claude triage narratives instead of the rule fallback
 cp .env.example .env   # then fill in ANTHROPIC_API_KEY and ANTHROPIC_MODEL
 uv run python -m intercompany_close_agent.cli run
 
-# review pending exceptions interactively
+# review pending exceptions interactively; the reviewer can't be who prepared the run
 uv run streamlit run app/streamlit_app.py
 
 # run the test suite

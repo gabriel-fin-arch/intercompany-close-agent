@@ -13,6 +13,7 @@ reviewer worklist -- it never silently books something a human should see.
 
 from __future__ import annotations
 
+import getpass
 import os
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from dotenv import load_dotenv
 
 from intercompany_close_agent.graph.graph import run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
+from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy, PolicyError
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 from intercompany_close_agent.synthetic.generator import generate as generate_dataset
 
@@ -42,15 +44,29 @@ def run(
     data_dir: Path = typer.Option(
         DEFAULT_DATA_DIR, help="Directory with entities.csv, trial_balance.csv, ic_ledger.csv"
     ),
+    policy_file: Path | None = typer.Option(
+        None,
+        "--policy",
+        help="TOML file with the materiality threshold and tolerances (see examples/policy.toml). "
+        "Without one, the built-in defaults apply.",
+    ),
+    prepared_by: str | None = typer.Option(
+        None, help="Who is preparing this close, for the audit trail. Defaults to your login name."
+    ),
 ) -> None:
     """Run the close pipeline end to end and print the results."""
     load_dotenv()
 
     try:
         entities, trial_balance, transactions = load_dataset(data_dir)
-    except DataLoadError as exc:
+        policy = ClosePolicy.from_toml(policy_file) if policy_file else DEFAULT_POLICY
+    except (DataLoadError, PolicyError) as exc:
         typer.echo(f"Cannot run the close: {exc}", err=True)
         raise typer.Exit(code=1) from exc
+    preparer = _login_name() if prepared_by is None else prepared_by
+    if not preparer.strip():
+        typer.echo("Cannot run the close: --prepared-by can't be blank.", err=True)
+        raise typer.Exit(code=1)
 
     model_name = os.environ.get("ANTHROPIC_MODEL")
     llm_configured = bool(os.environ.get("ANTHROPIC_API_KEY")) and bool(model_name)
@@ -58,7 +74,7 @@ def run(
     typer.echo(f"Triage mode: {mode}")
     typer.echo(f"Loaded {len(entities)} entities, {len(transactions)} IC transaction legs")
 
-    _, _, result = run_close(transactions, trial_balance, entities)
+    _, _, result = run_close(transactions, trial_balance, entities, prepared_by=preparer, policy=policy)
 
     typer.echo("")
     typer.echo("=== Audit trail ===")
@@ -93,6 +109,14 @@ def run(
         n_eliminations = len(result.get("eliminations", []))
         typer.echo("")
         typer.echo(f"No items needed human review. {n_eliminations} elimination(s) finalized.")
+
+
+def _login_name() -> str:
+    try:
+        return getpass.getuser()
+    except (KeyError, OSError) as exc:
+        typer.echo("Cannot tell who is running this; pass --prepared-by.", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 def main() -> None:

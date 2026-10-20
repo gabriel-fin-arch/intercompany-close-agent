@@ -56,7 +56,9 @@ def _offline() -> Iterator[None]:
 def summarize(data_dir: Path = OUTPUT_DIR) -> SampleRun:
     entities, trial_balance, transactions = load_dataset(data_dir)
     with _offline():
-        _, _, result = run_close(transactions, trial_balance, entities, thread_id="readme-results")
+        _, _, result = run_close(
+            transactions, trial_balance, entities, prepared_by="example preparer", thread_id="readme-results"
+        )
     exceptions = result["exceptions"]
     classes = [t.classification for t in result["triage_results"]]
     auto = {t.reference for t in result["triage_results"] if t.classification == TriageClassification.AUTO_RESOLVABLE}

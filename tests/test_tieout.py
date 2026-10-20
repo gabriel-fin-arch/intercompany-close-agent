@@ -8,11 +8,10 @@ from pathlib import Path
 
 from intercompany_close_agent.ingest.loaders import load_ic_transactions, load_trial_balance
 from intercompany_close_agent.models.ledger import ICTransaction, TrialBalanceLine
-from intercompany_close_agent.reconciliation.tieout import (
-    TIEOUT_TOLERANCE,
-    out_of_tolerance,
-    reconcile_to_trial_balance,
-)
+from intercompany_close_agent.policy import DEFAULT_POLICY
+from intercompany_close_agent.reconciliation.tieout import out_of_tolerance, reconcile_to_trial_balance
+
+TIEOUT_TOLERANCE = DEFAULT_POLICY.tieout_tolerance
 
 
 def _leg(entity: str, amount: str) -> ICTransaction:

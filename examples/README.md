@@ -3,7 +3,7 @@
 **`sample_cli_run.txt`** -- real output from:
 
 ```
-uv run python -m intercompany_close_agent.cli run
+uv run python -m intercompany_close_agent.cli run --prepared-by "example preparer"
 ```
 
 against the committed `data/synthetic/` dataset, offline (no
@@ -43,6 +43,10 @@ interfaced entities load straight from the ERP and don't re-key anything.
 The matching engine doesn't fuzzy-match references back together on purpose
 -- see `docs/human-in-the-loop.md` for why.
 
+**`policy.toml`** -- a close policy with the built-in defaults spelled out:
+the materiality threshold and the matching tolerance. Copy it, change it,
+and pass it with `run --policy` or the dashboard's **Policy file** field.
+
 ## Dashboard
 
 A screenshot is in the README (`docs/img/dashboard.png`); run it yourself
@@ -52,6 +56,8 @@ for the interactive version:
 uv run streamlit run app/streamlit_app.py
 ```
 
-Click **Run close pipeline** against the default data directory, and the
-same worklist from `sample_cli_run.txt` renders as an interactive review
-screen with approve/reject/edit per item.
+Enter who is preparing the close under **Prepared by** and click **Run
+close pipeline** against the default data directory, and the same worklist
+from `sample_cli_run.txt` renders as an interactive review screen with
+approve/reject/edit per item. Every item needs a decision, and the
+**Reviewer** who submits them has to be someone other than the preparer.

@@ -15,7 +15,8 @@ from dotenv import load_dotenv
 
 from intercompany_close_agent.graph.graph import resume_close, run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
-from intercompany_close_agent.models.review import ReviewAction, parse_override_amount
+from intercompany_close_agent.models.review import ReviewAction, parse_override_amount, same_person
+from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy, PolicyError
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR as DEFAULT_DATA_DIR
 
 load_dotenv()
@@ -29,6 +30,16 @@ st.caption("Matching -> eliminations -> triage -> human review, for the intercom
 with st.sidebar:
     st.header("Run")
     data_dir_input = st.text_input("Synthetic data directory", value=str(DEFAULT_DATA_DIR))
+    prepared_by_input = st.text_input(
+        "Prepared by",
+        help="Who is preparing this close. It goes into the audit trail, and this person can't also "
+        "review the worklist.",
+    )
+    policy_input = st.text_input(
+        "Policy file",
+        help="A TOML file with the materiality threshold and tolerances, like examples/policy.toml. "
+        "Leave blank for the built-in defaults.",
+    )
     run_clicked = st.button("Run close pipeline", type="primary")
     if st.session_state.get("result") is not None and st.button("Reset"):
         for key in ("graph", "config", "result", "final"):
@@ -36,12 +47,18 @@ with st.sidebar:
         st.rerun()
 
 if run_clicked:
+    if not prepared_by_input.strip():
+        st.error("Cannot run the close: enter who is preparing it under **Prepared by**.")
+        st.stop()
     try:
         entities, trial_balance, transactions = load_dataset(Path(data_dir_input))
-    except DataLoadError as exc:
+        policy = ClosePolicy.from_toml(Path(policy_input.strip())) if policy_input.strip() else DEFAULT_POLICY
+    except (DataLoadError, PolicyError) as exc:
         st.error(f"Cannot run the close: {exc}")
         st.stop()
-    graph, config, result = run_close(transactions, trial_balance, entities, thread_id="dashboard-run")
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="dashboard-run", prepared_by=prepared_by_input, policy=policy
+    )
     st.session_state["graph"] = graph
     st.session_state["config"] = config
     st.session_state["result"] = result
@@ -49,7 +66,7 @@ if run_clicked:
 
 result = st.session_state.get("result")
 if result is None:
-    st.info("Pick a data directory and click **Run close pipeline** to start.")
+    st.info("Pick a data directory, say who is preparing the close, and click **Run close pipeline** to start.")
     st.stop()
 
 final = st.session_state.get("final")
@@ -143,13 +160,25 @@ elif "__interrupt__" in result:
                 "override_amount": override_amount or None,
             }
 
+    preparer = result["prepared_by"]
+    reviewer = st.text_input(
+        "Reviewer",
+        key="reviewer",
+        help=f"Who is deciding these items. {preparer} prepared this run and can't also review it.",
+    )
+
     if st.button("Submit decisions", type="primary"):
-        # Every item needs a decision someone picked, and the free-text
-        # amounts are validated before resuming: an unparseable one would
-        # otherwise crash resume_close deep in pydantic, losing the whole
-        # worklist. Report each problem and let the reviewer fix it.
+        # Every item needs a decision someone picked, by someone other than
+        # the preparer (finalize checks that too), and the free-text amounts
+        # are validated before resuming: an unparseable one would otherwise
+        # crash resume_close deep in pydantic, losing the whole worklist.
+        # Report each problem and let the reviewer fix it.
         payload: list[dict] = []
         errors: list[str] = []
+        if not reviewer.strip():
+            errors.append("Enter who is reviewing under **Reviewer**.")
+        elif same_person(reviewer, preparer):
+            errors.append(f"{preparer} prepared this run; the worklist needs a reviewer who didn't.")
         undecided = [ref for ref, decision in decisions.items() if decision["action"] is None]
         if undecided:
             errors.append(
@@ -164,7 +193,7 @@ elif "__interrupt__" in result:
             except ValueError as exc:
                 errors.append(f"{ref}: {exc}")
                 continue
-            payload.append({**decision, "override_amount": amount})
+            payload.append({**decision, "reviewer": reviewer, "override_amount": amount})
 
         if errors:
             for message in errors:
