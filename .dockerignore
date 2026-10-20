@@ -1,0 +1,22 @@
+# Secrets never go into the image; the container runs the rules path.
+.env
+.env.*
+
+# Everything the image doesn't need to run the close or the dashboard.
+.git
+.github
+.venv*
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+evidence
+site
+docs
+tests
+.claude
+uv.lock

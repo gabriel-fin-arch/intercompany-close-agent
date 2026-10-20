@@ -235,6 +235,14 @@ uv run streamlit run app/streamlit_app.py
 uv run pytest
 ```
 
+Or without Python or uv, with Docker: the image runs the same offline close
+on the committed sample, and the dashboard on request (see the `Dockerfile`).
+
+```
+docker build -t intercompany-close-agent .
+docker run --rm intercompany-close-agent
+```
+
 ## What's out of scope (for now)
 
 FX/CTA translation, AR aging reconciliation, and Special Charges are all

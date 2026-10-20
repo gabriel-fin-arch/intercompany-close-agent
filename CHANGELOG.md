@@ -4,6 +4,14 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+### Added
+- A `Dockerfile` that runs the offline close on the committed sample with one
+  command, and the dashboard from the same image on a published port. Runtime
+  dependencies only, a non-root user, no `.env` or API key in the image
+  (`.dockerignore`). CI builds the image, runs the close in it and checks the
+  dashboard answers its health check. It runs `run` until the `demo` command
+  lands.
+
 ### Fixed
 - The commit history has its real dates. Every commit's author date is now the
   time it was made, taken from my Claude Code session logs, and no file
