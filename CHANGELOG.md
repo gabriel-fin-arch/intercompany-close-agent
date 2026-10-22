@@ -5,6 +5,13 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- A static page of the sample close, linked from the top of the README as
+  "Try it without installing". The `report` command builds it offline from the
+  committed data: the tie-out, the reviewer worklist, what triage proposes to
+  auto-eliminate, the clean pairs, the eliminations finalize books before any
+  review decision, and the audit trail. A new workflow publishes it to GitHub
+  Pages on every push to `main`, once Pages is set to GitHub Actions in the repo
+  settings.
 - CI checks types and measures coverage. mypy runs over `src/` with
   `check_untyped_defs` and fails the build on an error; the config is in
   `pyproject.toml`. It found two loaders building pydantic models from CSV

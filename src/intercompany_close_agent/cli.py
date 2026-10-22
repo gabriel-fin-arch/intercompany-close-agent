@@ -1,7 +1,8 @@
 """Command-line interface for the intercompany close agent.
 
-Six commands:
+Seven commands:
   demo            -- `run` on the committed sample data, always offline
+  report          -- the same offline run as a static HTML page
   generate-data   -- regenerate the synthetic dataset
   write-workbook  -- write a folder of CSV inputs as one .xlsx workbook
   run             -- run the close pipeline end to end and print the results
@@ -25,6 +26,7 @@ from pathlib import Path
 import typer
 from dotenv import load_dotenv
 
+from intercompany_close_agent import report as static_report
 from intercompany_close_agent.evidence import write_pack
 from intercompany_close_agent.graph.graph import run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
@@ -114,6 +116,16 @@ def demo() -> None:
         "That was the committed synthetic dataset, with the rule-based triage. Why each item above "
         "needs a person: docs/human-in-the-loop.md"
     )
+
+
+@app.command()
+def report(
+    out_dir: Path = typer.Option(Path("site"), "--out", help="Where to write index.html"),
+) -> None:
+    """The sample close as a static HTML page, offline (what CI publishes to GitHub Pages)."""
+    # GITHUB_SHA is set in Actions; the page links the commit it was built from.
+    target = static_report.write(out_dir, commit=os.environ.get("GITHUB_SHA"))
+    typer.echo(f"Wrote {target}")
 
 
 def _close(data_dir: Path, policy_file: Path | None, prepared_by: str | None, evidence_dir: Path) -> None:
