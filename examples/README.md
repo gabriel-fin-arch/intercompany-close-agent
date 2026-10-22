@@ -57,8 +57,9 @@ and pass it with `run --policy` or the dashboard's **Policy file** field.
 
 ## Dashboard
 
-A screenshot is in the README (`docs/img/dashboard.png`); run it yourself
-for the interactive version:
+A short recording is in the README (`docs/img/demo.gif`), and a still of the
+finalized dashboard is `docs/img/dashboard.png`; run it yourself for the
+interactive version:
 
 ```
 uv run streamlit run app/streamlit_app.py
