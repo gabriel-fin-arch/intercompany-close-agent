@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -40,7 +41,7 @@ def test_every_command_prints_its_help():
     """Below typer 0.16, --help goes through a click API that changed in 8.2 and
     dies with a traceback. Nothing else in this file asks for help, so the suite
     stayed green on a floor that could not print a usage line."""
-    for command in ([], ["run"], ["generate-data"], ["triage-eval"]):
+    for command in ([], ["run"], ["demo"], ["generate-data"], ["triage-eval"]):
         result = runner.invoke(app, [*command, "--help"])
 
         assert result.exit_code == 0, result.output
@@ -127,3 +128,23 @@ def test_run_refuses_a_blank_preparer():
 
     assert result.exit_code == 1
     assert "--prepared-by can't be blank" in result.output
+
+
+def test_demo_runs_offline_whatever_the_environment_says(monkeypatch):
+    """The demo is the offline run on the committed data, even with a key and a
+    model set, and it leaves the environment as it found it."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "not-a-real-key")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-opus-5-5")
+
+    def no_model_calls(*args, **kwargs):
+        raise AssertionError("the demo called the model")
+
+    monkeypatch.setattr("intercompany_close_agent.triage.llm.triage_exception", no_model_calls)
+
+    result = runner.invoke(app, ["demo"])
+
+    assert result.exit_code == 0, result.output
+    assert "Triage mode: offline rule-based fallback" in result.output
+    assert "Reviewer worklist" in result.output
+    assert "docs/human-in-the-loop.md" in result.output
+    assert os.environ["ANTHROPIC_API_KEY"] == "not-a-real-key"

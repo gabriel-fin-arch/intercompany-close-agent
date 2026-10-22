@@ -13,15 +13,13 @@ rewrites the block.
 from __future__ import annotations
 
 import argparse
-import os
 import textwrap
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
 from intercompany_close_agent.graph.graph import run_close
 from intercompany_close_agent.ingest.loaders import load_dataset
+from intercompany_close_agent.offline import offline
 from intercompany_close_agent.synthetic.generator import OUTPUT_DIR
 from intercompany_close_agent.triage.models import TriageClassification
 
@@ -43,19 +41,9 @@ class SampleRun:
     entities_not_tying: int
 
 
-@contextmanager
-def _offline() -> Iterator[None]:
-    """The README shows the offline run, whatever key is in the environment."""
-    saved = {k: os.environ.pop(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_MODEL") if k in os.environ}
-    try:
-        yield
-    finally:
-        os.environ.update(saved)
-
-
 def summarize(data_dir: Path = OUTPUT_DIR) -> SampleRun:
     entities, trial_balance, transactions = load_dataset(data_dir)
-    with _offline():
+    with offline():  # the README shows the offline run, whatever key is in the environment
         _, _, result = run_close(
             transactions, trial_balance, entities, prepared_by="example preparer", thread_id="readme-results"
         )

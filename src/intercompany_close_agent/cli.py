@@ -1,6 +1,7 @@
 """Command-line interface for the intercompany close agent.
 
-Five commands:
+Six commands:
+  demo            -- `run` on the committed sample data, always offline
   generate-data   -- regenerate the synthetic dataset
   write-workbook  -- write a folder of CSV inputs as one .xlsx workbook
   run             -- run the close pipeline end to end and print the results
@@ -28,6 +29,7 @@ from intercompany_close_agent.evidence import write_pack
 from intercompany_close_agent.graph.graph import run_close
 from intercompany_close_agent.ingest.loaders import DataLoadError, load_dataset
 from intercompany_close_agent.ingest.workbook import write_workbook
+from intercompany_close_agent.offline import offline
 from intercompany_close_agent.policy import DEFAULT_POLICY, ClosePolicy, PolicyError
 from intercompany_close_agent.scale import report as scale_report
 from intercompany_close_agent.scale import scale_run as run_at_scale
@@ -97,7 +99,24 @@ def run(
 ) -> None:
     """Run the close pipeline end to end and print the results."""
     load_dotenv()
+    _close(data_dir, policy_file, prepared_by, evidence_dir)
 
+
+@app.command()
+def demo() -> None:
+    """The whole close on the committed sample data, offline, whatever is in the environment."""
+    # No load_dotenv() here: a .env with a key in it would switch triage to the
+    # model, and the demo is the offline run.
+    with offline():
+        _close(DEFAULT_DATA_DIR, None, None, Path("evidence"))
+    typer.echo("")
+    typer.echo(
+        "That was the committed synthetic dataset, with the rule-based triage. Why each item above "
+        "needs a person: docs/human-in-the-loop.md"
+    )
+
+
+def _close(data_dir: Path, policy_file: Path | None, prepared_by: str | None, evidence_dir: Path) -> None:
     try:
         entities, trial_balance, transactions = load_dataset(data_dir)
         policy = ClosePolicy.from_toml(policy_file) if policy_file else DEFAULT_POLICY

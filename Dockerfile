@@ -1,5 +1,5 @@
-# The offline close in a container: the committed sample, the rule-based
-# triage, no API key. Build and run:
+# The demo in a container: the offline close on the committed sample, the
+# rule-based triage, no API key. Build and run:
 #
 #   docker build -t intercompany-close-agent .
 #   docker run --rm intercompany-close-agent
@@ -35,4 +35,4 @@ RUN uv sync
 RUN useradd --create-home demo && chown -R demo /app
 USER demo
 
-CMD ["python", "-m", "intercompany_close_agent.cli", "run"]
+CMD ["python", "-m", "intercompany_close_agent.cli", "demo"]
