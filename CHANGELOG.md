@@ -5,6 +5,14 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- CI checks types and measures coverage. mypy runs over `src/` with
+  `check_untyped_defs` and fails the build on an error; the config is in
+  `pyproject.toml`. It found two loaders building pydantic models from CSV
+  text through the constructor, which now go through `model_validate` (same
+  validation, same errors). The one call where mypy can't see langchain's
+  field aliases was already ignored, with the reason, when triage got its
+  default model. Coverage (97%, lines and branches) goes to each run's job
+  summary.
 - A `demo` command: the whole close on the committed sample data in one
   command, always offline. It doesn't read `.env` and clears any key in the
   environment for the run, so it never calls the model. Quickstart leads with
