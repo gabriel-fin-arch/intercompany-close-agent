@@ -5,6 +5,13 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- A short recording near the top of the README (`docs/img/demo.gif`, 24 s,
+  0.3 MB): the `demo` output, then the dashboard running the close, every
+  worklist item rejected and one with a note, and the finalized close with its
+  evidence pack. `scripts/record_demo.py` makes it from the code as it is, with
+  Playwright, and the README says frame by frame what it shows. Rejecting is
+  the one decision that books nothing, so the recording makes no accounting
+  call.
 - A static page of the sample close, linked from the top of the README as
   "Try it without installing". The `report` command builds it offline from the
   committed data: the tie-out, the reviewer worklist, what triage proposes to
