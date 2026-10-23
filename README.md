@@ -36,6 +36,14 @@ the tests rerun the close offline and fail if these figures change):
   plants on purpose.
 <!-- sample-results:end -->
 
+![Recording of the sample close: the demo command's output, then the reviewer dashboard running the close, every worklist item rejected and one with a note, and the finalized close with its eliminations and evidence pack](docs/img/demo.gif)
+
+*Frame by frame: the `demo` command's output, drawn as text; the dashboard before the run, with the preparer
+named; after it, with the tie-out break and the 16-item worklist; one item rejected with a reviewer note, and
+the other 15 rejected without one, so nothing on the worklist is eliminated; the finalized close, with its 13
+eliminations (the 11 clean pairs and the 2 residuals triage proposed) and the evidence pack. The names are made
+up. `scripts/record_demo.py` makes it from the code as it is.*
+
 ## Quickstart
 
 One command, from a clone, with no API key:
@@ -127,14 +135,6 @@ matched or eliminated.
   else was considered and who decided.
 - How I built this: which decisions are mine and what an AI assistant wrote.
 - The Quickstart above runs the whole close offline; CI is green.
-
-![Recording of the sample close: the demo command's output, then the reviewer dashboard running the close, every worklist item rejected and one with a note, and the finalized close with its eliminations and evidence pack](docs/img/demo.gif)
-
-*Frame by frame: the `demo` command's output, drawn as text; the dashboard before the run, with the preparer
-named; after it, with the tie-out break and the 16-item worklist; one item rejected with a reviewer note, and
-the other 15 rejected without one, so nothing on the worklist is eliminated; the finalized close, with its 13
-eliminations (the 11 clean pairs and the 2 residuals triage proposed) and the evidence pack. The names are made
-up. `scripts/record_demo.py` makes it from the code as it is.*
 
 ---
 

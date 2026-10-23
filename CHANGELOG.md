@@ -33,6 +33,8 @@ All notable changes to this project are logged here.
   it, and the Docker image runs it.
 
 ### Changed
+- The recording moves to the first screen of the README, right after the
+  sample results, instead of sitting below the Quickstart.
 - The README follows the same order and headings as revrec-contract-reviewer's:
   Quickstart near the top, sections unnumbered, "What it does not do" and "How
   I built this" at the end. Nothing in it was dropped.
