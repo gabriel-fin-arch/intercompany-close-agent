@@ -4,6 +4,12 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+### Added
+- A `demo` command: the whole close on the committed sample data in one
+  command, always offline. It doesn't read `.env` and clears any key in the
+  environment for the run, so it never calls the model. Quickstart leads with
+  it, and the Docker image runs it.
+
 ### Changed
 - The README follows the same order and headings as revrec-contract-reviewer's:
   Quickstart near the top, sections unnumbered, "What it does not do" and "How

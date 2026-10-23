@@ -35,7 +35,15 @@ the tests rerun the close offline and fail if these figures change):
 
 ## Quickstart
 
-Runs with no API key: triage falls back to the offline rules.
+One command, from a clone, with no API key:
+
+```
+uv run python -m intercompany_close_agent.cli demo
+```
+
+That's the whole close on the committed sample data, offline: the tie-out, the
+matching, triage by the offline rules and the reviewer worklist. The same steps
+one at a time (without a key, triage falls back to the offline rules):
 
 ```
 uv sync --extra dev
@@ -74,8 +82,9 @@ uv run pytest
 uv run pre-commit install
 ```
 
-Or without Python or uv, with Docker: the image runs the same offline close
-on the committed sample, and the dashboard on request (see the `Dockerfile`).
+Or without Python or uv, with Docker: the image runs the demo, the same
+offline close on the committed sample, and the dashboard on request (see the
+`Dockerfile`).
 
 ```
 docker build -t intercompany-close-agent .
