@@ -121,7 +121,8 @@ matched or eliminated.
   only triages and writes the rationale.
 - `docs/human-in-the-loop.md`: the six exception types that never auto-resolve.
 - `docs/controls.md`: each control, the code that enforces it, the test that
-  proves it, and what the evidence pack of a finalized run keeps for it.
+  proves it, and what the evidence pack of a finalized run keeps for it —
+  as CSVs to import and as one `close.xlsx` workbook to read in Excel.
 - `docs/journal-export.md`: the entries a close booked, as a journal to import,
   generic or for Dynamics 365 Finance, with what each assumes.
 - `docs/scale.md`: the same close on a 60-entity group with 3,005 ledger

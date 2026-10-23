@@ -3,7 +3,11 @@
 What each control in the close is for, where the code enforces it, which
 test proves it, and what a finalized run's evidence pack keeps for it. The
 pack is one folder per run, written by `evidence.py`; its files are listed
-at the top of that module.
+at the top of that module. Alongside the CSVs it writes `close.xlsx`, the
+same pack as one workbook for a reviewer who works in Excel — same columns
+and values, read from the pack's own files, with a first sheet for what
+`run.json` says; the CSVs stay the files to import, the workbook is for
+reading.
 
 This is a portfolio project on synthetic data. The matrix says what the code
 does and how to check it, not that anyone has audited it.

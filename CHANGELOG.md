@@ -5,6 +5,13 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Added
+- A finalized close also writes `close.xlsx` in its evidence pack: a first
+  sheet with what `run.json` says, then one sheet per CSV (tie-out,
+  exceptions, decisions, eliminations, journal and journal for Dynamics 365),
+  with the same columns and values read from the pack's own files. Amounts
+  are numbers with a number format, dates are dates, the header row is frozen
+  and filtered, and the same pack gives the same workbook byte for byte. The
+  CSVs don't change and stay the files to import; the workbook is for reading.
 - A short recording near the top of the README (`docs/img/demo.gif`, 24 s,
   0.3 MB): the `demo` output, then the dashboard running the close, every
   worklist item rejected and one with a note, and the finalized close with its

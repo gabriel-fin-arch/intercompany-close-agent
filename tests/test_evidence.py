@@ -53,8 +53,8 @@ def _rows(text: str) -> list[dict[str, str]]:
     return list(csv.DictReader(io.StringIO(text)))
 
 
-def test_the_pack_is_the_six_files(final: dict):
-    assert tuple(pack_files(final, DATA_DIR)) == PACK_FILES
+def test_the_pack_is_the_csv_json_and_text_files(final: dict):
+    assert tuple(pack_files(final, DATA_DIR)) == tuple(name for name in PACK_FILES if name != "close.xlsx")
 
 
 def test_run_json_says_who_when_under_what_policy_from_what_code_and_inputs(final: dict, monkeypatch):
@@ -143,7 +143,7 @@ def test_a_written_pack_is_never_overwritten_and_zips_whole(final: dict, tmp_pat
 
     assert first != second
     assert sorted(p.name for p in first.iterdir()) == sorted(PACK_FILES)
-    assert all(b"\r" not in p.read_bytes() for p in first.iterdir())
+    assert all(b"\r" not in p.read_bytes() for p in first.iterdir() if p.suffix != ".xlsx")
     with zipfile.ZipFile(io.BytesIO(zip_pack(first))) as archive:
         assert sorted(archive.namelist()) == sorted(f"{first.name}/{name}" for name in PACK_FILES)
         assert archive.read(f"{first.name}/run.json") == (first / "run.json").read_bytes()
