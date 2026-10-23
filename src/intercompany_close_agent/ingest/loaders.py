@@ -154,7 +154,7 @@ def _entities(rows: Rows) -> list[Entity]:
     entities: list[Entity] = []
     for where, row in rows:
         try:
-            entities.append(Entity(**row))
+            entities.append(Entity.model_validate(row))
         except ValueError as exc:
             raise _bad_row(where, exc) from exc
     return entities
@@ -181,15 +181,19 @@ def _ic_transactions(rows: Rows) -> list[ICTransaction]:
     transactions: list[ICTransaction] = []
     for where, row in rows:
         try:
+            # model_validate rather than the constructor: the date arrives as text
+            # and pydantic parses it, which the constructor's signature can't say.
             transactions.append(
-                ICTransaction(
-                    entity_code=row["entity_code"],
-                    counterparty_code=row["counterparty_code"],
-                    reference=row["reference"],
-                    amount=_parse_decimal(row["amount"]),
-                    currency=row.get("currency") or "USD",
-                    transaction_date=row["transaction_date"],
-                    description=row.get("description") or "",
+                ICTransaction.model_validate(
+                    {
+                        "entity_code": row["entity_code"],
+                        "counterparty_code": row["counterparty_code"],
+                        "reference": row["reference"],
+                        "amount": _parse_decimal(row["amount"]),
+                        "currency": row.get("currency") or "USD",
+                        "transaction_date": row["transaction_date"],
+                        "description": row.get("description") or "",
+                    }
                 )
             )
         except ValueError as exc:

@@ -25,8 +25,15 @@ jobs:
       - name: Lint and pre-commit hooks
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
-      - name: Test
-        run: uv run pytest -q
+      - name: Type check
+        run: uv run mypy
+
+      # Coverage goes to the job summary, where anyone looking at a run can see
+      # it, with no third-party service.
+      - name: Test, with coverage
+        run: |
+          uv run pytest -q --cov --cov-report=term
+          uv run coverage report --format=markdown >> "$GITHUB_STEP_SUMMARY"
 
       - name: Smoke-test the pipeline offline
         run: |
