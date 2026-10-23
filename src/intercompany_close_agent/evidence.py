@@ -14,6 +14,9 @@ project installed:
   eliminations.csv  every journal line the close booked
   journal.csv       the same entries as a journal to import, and
   journal_d365.csv  laid out for Dynamics 365 Finance (journal.py)
+  close.xlsx        the whole pack as one workbook, for a reviewer who works
+                    in Excel (evidence_workbook.py); the CSVs stay the files
+                    to import, the workbook is for reading
 
 Everything in it is read from the run's own state; nothing is recomputed,
 so the pack can't disagree with what the close did. `docs/controls.md` says
@@ -32,6 +35,7 @@ import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
+from intercompany_close_agent.evidence_workbook import close_xlsx
 from intercompany_close_agent.ingest.loaders import input_files
 from intercompany_close_agent.journal import d365_csv, generic_csv
 
@@ -46,6 +50,7 @@ PACK_FILES = (
     "eliminations.csv",
     "journal.csv",
     "journal_d365.csv",
+    "close.xlsx",
 )
 
 NOTE = (
@@ -233,6 +238,7 @@ def write_pack(state: dict, out_root: Path, source: Path) -> Path:
     folder.mkdir()
     for name, content in files.items():
         (folder / name).write_bytes(content.encode("utf-8"))
+    (folder / "close.xlsx").write_bytes(close_xlsx(files))
     return folder
 
 
