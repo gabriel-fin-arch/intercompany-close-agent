@@ -123,6 +123,8 @@ matched or eliminated.
   5.5, run once on 20 October 2026 at the API's default effort (35 calls,
   USD 0.40), got 23 of 24 and 11 of 11; its one miss is a cautious
   escalation.
+- `docs/adr/`: the main design decisions, one short record each, with what
+  else was considered and who decided.
 - How I built this: which decisions are mine and what an AI assistant wrote.
 - The Quickstart above runs the whole close offline; CI is green.
 
@@ -293,7 +295,7 @@ app/
   streamlit_app.py   reviewer dashboard
 data/synthetic/      committed sample dataset (regeneratable)
 evals/triage/        labelled and adversarial triage sets, and their saved runs
-docs/                architecture.md, human-in-the-loop.md, data-model.md
+docs/                architecture.md, human-in-the-loop.md, data-model.md, adr/
 tests/
 ```
 
