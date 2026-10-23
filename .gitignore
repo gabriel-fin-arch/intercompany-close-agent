@@ -36,3 +36,4 @@ evidence/
 .DS_Store
 Thumbs.db
 uv.lock
+site/

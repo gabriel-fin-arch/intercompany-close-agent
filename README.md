@@ -12,6 +12,9 @@ it's safe to run and inspect end to end. Runs fully offline by default. A
 Claude API key upgrades the triage narrative; it doesn't change what gets
 booked.
 
+**Try it without installing:** [the sample close as a page](https://gabriel-fin-arch.github.io/intercompany-close-agent/),
+built offline from this repo by CI on every push to `main`.
+
 > **About the commit history.** I built this with Claude Code in August 2026
 > and first published it that month under an earlier account. The commits were
 > dated back, mostly to September 2025–January 2026, to look like months of
@@ -73,6 +76,9 @@ uv run python -m intercompany_close_agent.cli triage-eval --set adversarial
 
 # review pending exceptions interactively; the reviewer can't be who prepared the run
 uv run streamlit run app/streamlit_app.py
+
+# the same offline run as a static page, in site/ (what the Try it link shows)
+uv run python -m intercompany_close_agent.cli report
 
 # run the test suite
 uv run pytest
@@ -274,6 +280,9 @@ src/intercompany_close_agent/
   graph/           LangGraph state, nodes, and the compiled graph
   synthetic/       synthetic dataset generator
   cli.py           typer CLI
+  offline.py       runs with the model switched off (demo, report, README results)
+  sample_results.py  the README's results block, from a run
+  report.py        the static page CI publishes to GitHub Pages
 app/
   streamlit_app.py   reviewer dashboard
 data/synthetic/      committed sample dataset (regeneratable)

@@ -47,6 +47,11 @@ def summarize(data_dir: Path = OUTPUT_DIR) -> SampleRun:
         _, _, result = run_close(
             transactions, trial_balance, entities, prepared_by="example preparer", thread_id="readme-results"
         )
+    return summary_of(entities, transactions, result)
+
+
+def summary_of(entities: list, transactions: list, result: dict) -> SampleRun:
+    """The figures, from a run that has already happened (the static report reuses it)."""
     exceptions = result["exceptions"]
     classes = [t.classification for t in result["triage_results"]]
     auto = {t.reference for t in result["triage_results"] if t.classification == TriageClassification.AUTO_RESOLVABLE}
@@ -69,7 +74,8 @@ def summarize(data_dir: Path = OUTPUT_DIR) -> SampleRun:
 _KIND = {"amount_mismatch": "amount", "timing_gap": "timing"}
 
 
-def render(run: SampleRun) -> str:
+def bullets(run: SampleRun) -> list[str]:
+    """The three findings as plain sentences, shared by the README and the static report."""
     kinds = " or ".join(run.auto_resolvable_kinds)
     rest = (
         f" The other {run.auto_resolvable} are {kinds} differences below materiality between interfaced "
@@ -78,21 +84,24 @@ def render(run: SampleRun) -> str:
         else ""
     )
     fails = "fails" if run.entities_not_tying == 1 else "fail"
-    intro = (
-        f"**Results on the sample data** (synthetic: {run.entities} entities, {run.legs} intercompany legs; "
-        "the tests rerun the close offline and fail if these figures change):"
-    )
-    bullets = [
+    return [
         f"{run.clean_pairs} pairs match clean, and {run.exceptions} balances become exceptions, "
         f"of {run.exception_types} different types.",
         f"{run.for_review} of the {run.exceptions} go to a reviewer.{rest}",
         f"{run.entities_not_tying} of {run.entities} entities {fails} the control-account tie-out, "
         "a break the sample data plants on purpose.",
     ]
+
+
+def render(run: SampleRun) -> str:
+    intro = (
+        f"**Results on the sample data** (synthetic: {run.entities} entities, {run.legs} intercompany legs; "
+        "the tests rerun the close offline and fail if these figures change):"
+    )
     # Wrapped like the rest of the README.
     wrap = textwrap.TextWrapper(width=78, break_on_hyphens=False, break_long_words=False)
     lines = wrap.wrap(intro) + [""]
-    for b in bullets:
+    for b in bullets(run):
         wrap.initial_indent, wrap.subsequent_indent = "- ", "  "
         lines += wrap.wrap(b)
     return "\n".join(lines)
