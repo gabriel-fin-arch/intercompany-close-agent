@@ -4,6 +4,11 @@ All notable changes to this project are logged here.
 
 ## [Unreleased]
 
+### Changed
+- The README follows the same order and headings as revrec-contract-reviewer's:
+  Quickstart near the top, sections unnumbered, "What it does not do" and "How
+  I built this" at the end. Nothing in it was dropped.
+
 ## [0.2.0] - 2026-10-20
 
 ### Added
