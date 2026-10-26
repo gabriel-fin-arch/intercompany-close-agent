@@ -106,7 +106,12 @@ def run(
 
 @app.command()
 def demo() -> None:
-    """The whole close on the committed sample data, offline, whatever is in the environment."""
+    """The whole close on the committed sample data, offline, whatever is in the environment.
+
+    It writes no file: the sample close stops at the reviewer worklist, and its
+    evidence pack is written from the dashboard once every item has a decision.
+    Run it from the repository's folder, where the sample data is.
+    """
     # No load_dotenv() here: a .env with a key in it would switch triage to the
     # model, and the demo is the offline run.
     with offline():

@@ -10,6 +10,17 @@ All notable changes to this project are logged here.
   `close.xlsx`'s `run` sheet and the start of `tieout`, read from the workbook
   rather than recreated from hard-coded values. The README describes the new
   frame and what the workbook shows.
+- `demo --help` says what the command writes: no file, since the sample close
+  stops at the reviewer worklist and the evidence pack comes from the
+  dashboard; and that it runs from the repository's folder. The review of #34
+  recorded this wording as asked for and added, but it never made it into that
+  PR; a test now holds the help to what the demo does. The Quickstart says the
+  same.
+- "How I built this" links to HOW_I_WORK.md in the profile repo: how a change
+  gets made, who does what, and the rules the assistant works under.
+- The pull request template lists the checks CI runs today: the pre-commit
+  hooks instead of ruff alone, mypy, the container job, and the line on API
+  calls that revrec-contract-reviewer's template already had.
 
 ## [0.3.0] - 2026-10-26
 
