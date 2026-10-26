@@ -1,13 +1,15 @@
-"""Record docs/img/demo.gif: the offline demo, then the reviewer dashboard.
+"""Record docs/img/demo.gif: the offline demo, dashboard, and Excel evidence.
 
 Every frame comes from the code as it is. The first is the real output of
-`cli demo`, drawn as text; the rest are screenshots of the Streamlit dashboard
-running on the committed data, driven by Playwright: name the preparer, run
-the close, reject one worklist item with a note and the rest without, name the
-reviewer, submit. Every item needs a decision before the dashboard submits,
-and rejecting is the one that books nothing, so the recording doesn't make an
-accounting call on anyone's behalf. Run from the repo root with a Python that
-has Playwright (and its Chromium) and Pillow:
+`cli demo`, drawn as text; the next four are screenshots of the Streamlit
+dashboard running on the committed data, driven by Playwright: name the
+preparer, run the close, reject one worklist item with a note and the rest
+without, name the reviewer, submit. Every item needs a decision before the
+dashboard submits, and rejecting is the one that books nothing, so the
+recording doesn't make an accounting call on anyone's behalf. The last frame
+reads the real `close.xlsx` that the finalized run writes and draws its `run`
+and `tieout` sheets as monospace tables. Run from the repo root with a Python
+that has Playwright (and its Chromium), Pillow and openpyxl:
 
     python scripts/record_demo.py
 
@@ -24,6 +26,7 @@ import time
 import urllib.request
 from pathlib import Path
 
+from openpyxl import load_workbook
 from PIL import Image, ImageDraw, ImageFont
 from playwright.sync_api import sync_playwright
 
@@ -125,6 +128,34 @@ def dashboard_frames() -> list[Image.Image]:
     return frames
 
 
+def workbook_frame() -> Image.Image:
+    """Draw the run and tie-out sheets from the pack just written."""
+    packs = list((ROOT / "evidence").glob("*/close.xlsx"))
+    if not packs:
+        raise RuntimeError("the dashboard did not write close.xlsx")
+    workbook = load_workbook(max(packs, key=lambda path: path.stat().st_mtime), read_only=True, data_only=True)
+    try:
+        lines = [("Evidence workbook: close.xlsx", "#9cdcfe"), ("", "#d4d4d4")]
+        for sheet_name, last_row in (("run", 12), ("tieout", 6)):
+            lines.append((f"Sheet: {sheet_name}", "#4ec9b0"))
+            sheet = workbook[sheet_name]
+            for row in sheet.iter_rows(min_row=1, max_row=last_row, values_only=True):
+                lines.append((" | ".join("" if value is None else str(value) for value in row), "#d4d4d4"))
+            lines.append(("", "#d4d4d4"))
+    finally:
+        workbook.close()
+
+    try:
+        font = ImageFont.truetype("consola.ttf", 17)
+    except OSError:
+        font = ImageFont.truetype("DejaVuSansMono.ttf", 16)
+    image = Image.new("RGB", (WIDTH, HEIGHT), "#1e1e1e")
+    draw = ImageDraw.Draw(image)
+    for i, (line, colour) in enumerate(lines):
+        draw.text((24, 20 + i * 24), line[:130], font=font, fill=colour)
+    return image
+
+
 def main() -> None:
     frames = [
         terminal_frame(
@@ -133,9 +164,10 @@ def main() -> None:
         )
     ]
     frames += dashboard_frames()
+    frames.append(workbook_frame())
     small = [f.resize((GIF_WIDTH, round(f.height * GIF_WIDTH / f.width)), Image.LANCZOS) for f in frames]
     palette = [f.quantize(colors=128, method=Image.Quantize.MEDIANCUT) for f in small]
-    durations = [5000, 3000, 5000, 5000, 6000][: len(palette)]
+    durations = [5000, 3000, 5000, 5000, 6000, 6000][: len(palette)]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     palette[0].save(OUT, save_all=True, append_images=palette[1:], duration=durations, loop=0, optimize=True)
     print(f"{OUT}: {len(palette)} frames, {sum(durations) / 1000:.0f} s, {OUT.stat().st_size / 1e6:.2f} MB")
