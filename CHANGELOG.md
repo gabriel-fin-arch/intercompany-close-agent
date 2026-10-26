@@ -2,7 +2,7 @@
 
 All notable changes to this project are logged here.
 
-## [Unreleased]
+## [0.3.0] - 2026-10-26
 
 ### Added
 - A finalized close also writes `close.xlsx` in its evidence pack: a first
