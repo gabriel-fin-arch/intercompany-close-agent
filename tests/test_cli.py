@@ -148,3 +148,20 @@ def test_demo_runs_offline_whatever_the_environment_says(monkeypatch):
     assert "Reviewer worklist" in result.output
     assert "docs/human-in-the-loop.md" in result.output
     assert os.environ["ANTHROPIC_API_KEY"] == "not-a-real-key"
+
+
+def test_demo_writes_no_file_and_its_help_says_so(monkeypatch):
+    """`--help` is the first thing a reader runs, so what it promises about
+    files is checked against what the demo does."""
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    def no_pack(*args, **kwargs):
+        raise AssertionError("the demo wrote an evidence pack")
+
+    monkeypatch.setattr("intercompany_close_agent.cli.write_pack", no_pack)
+
+    result = runner.invoke(app, ["demo"])
+    help_text = " ".join(runner.invoke(app, ["demo", "--help"]).output.split())
+
+    assert result.exit_code == 0, result.output
+    assert "It writes no file" in help_text

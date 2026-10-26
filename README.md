@@ -54,8 +54,9 @@ uv run python -m intercompany_close_agent.cli demo
 ```
 
 That's the whole close on the committed sample data, offline: the tie-out, the
-matching, triage by the offline rules and the reviewer worklist. The same steps
-one at a time (without a key, triage falls back to the offline rules):
+matching, triage by the offline rules and the reviewer worklist. It writes no
+file: the evidence pack comes from the dashboard, once every item on the
+worklist has a decision. The same steps one at a time (without a key, triage falls back to the offline rules):
 
 ```
 uv sync --extra dev
@@ -320,7 +321,9 @@ Code wrote the code and the tests, and most of the docs, against that design.
 I reviewed what it produced and sent back what was wrong; every decision
 listed above is one I can walk you through. The commit messages before 14
 October 2026 are the assistant's too, written in a casual first-person style I
-asked for; commits it drafts now carry a `Co-Authored-By` line.
+asked for; commits it drafts now carry a `Co-Authored-By` line. How a change
+gets made now, who does what, and the rules the assistant works under:
+[HOW_I_WORK.md](https://github.com/gabriel-fin-arch/gabriel-fin-arch/blob/main/HOW_I_WORK.md).
 
 ## License
 
