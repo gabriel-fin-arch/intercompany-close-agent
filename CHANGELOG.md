@@ -22,6 +22,32 @@ All notable changes to this project are logged here.
   hooks instead of ruff alone, mypy, the container job, and the line on API
   calls that revrec-contract-reviewer's template already had.
 
+### Fixed
+- A pair with one leg booked at zero. `_receivable_and_payable` sorted on the
+  first leg alone, so with the zero first a negative leg landed on the
+  receivable side: an edited amount was booked the wrong way round, debiting
+  the payable of the entity that was owed and crediting the receivable of the
+  one that owed. With the zero second, a clean pair inside the tolerance asked
+  for an entry of zero and crashed the whole close; with it first, the
+  payable it left was never reported. Legs are now sorted on whichever has a
+  sign. A clean pair with nothing to eliminate on the receivable side books
+  nothing and reports what stays in the other control account, and an
+  exception in that state is left unbooked with the reason unless a reviewer
+  supplies the amount.
+- An approved `self_dealing` balance whose entry would debit and credit one
+  entity was booked, which is the entry the exception exists to stop. It is
+  now left unbooked with the reason.
+- `close.xlsx` stored text that starts with "=" as a formula, so a reviewer's
+  note, a name or a ledger description could show what Excel computes, or
+  call a URL, instead of what was recorded. Text cells are stored as text.
+- The dashboard's override amount let "NaN" through as an unhandled error and
+  "Infinity" through to crash the resume, and took amounts finer than a cent
+  that the journal then rounded away. Both are refused with a message, an
+  amount can have at most two decimal places, and it comes back in cents.
+- `TrialBalanceLine.balance` was described as local currency, but the tie-out
+  compares it with the USD ledger directly. The description and
+  `docs/data-model.md` now say both feeds are in the reporting currency.
+
 ## [0.3.0] - 2026-10-26
 
 ### Added

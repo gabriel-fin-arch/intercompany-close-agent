@@ -18,6 +18,7 @@ from intercompany_close_agent.eliminations.engine import (
     build_elimination_from_known_leg,
     build_eliminations,
     elimination_residuals,
+    receivable_amount,
 )
 from intercompany_close_agent.graph.state import CloseState
 from intercompany_close_agent.matching.engine import match_transactions
@@ -176,12 +177,59 @@ def _within_tolerance_notes(
     exception path already writes the same thing down for larger ones.
     """
     pairs_by_reference = {pair[0].reference: pair for pair in pairs}
-    return [
+    notes = [
         f"{elim.reference}: matched within tolerance and eliminated at {elim.lines[0].amount}; "
         f"{entity_code}'s control account keeps a residual of {residual} after posting"
         for elim in eliminations
         for entity_code, residual in elimination_residuals(list(pairs_by_reference[elim.reference]), elim)
     ]
+    # A pair whose receivable side is zero gets no elimination at all, so the
+    # loop above never sees it; a payable left on the other side is still a
+    # number nobody eliminated.
+    eliminated = {elim.reference for elim in eliminations}
+    notes += [
+        f"{leg.reference}: matched within tolerance, but the receivable side is zero, so nothing was "
+        f"eliminated; {leg.entity_code}'s control account keeps {leg.amount}"
+        for pair in pairs
+        if pair[0].reference not in eliminated
+        for leg in pair
+        if leg.amount != 0
+    ]
+    return notes
+
+
+def _unbookable_at_zero(ref: str, exc: ICException, how: str, next_step: str) -> str | None:
+    """A reason not to book, when the receivable leg's own amount is zero.
+
+    Booking an exception without an override uses the receivable leg's own
+    amount, and an entity that booked nothing on that side leaves zero:
+    nothing to eliminate, and an entry `JournalLine` refuses. The item stays
+    unbooked with this reason instead of crashing the close.
+    """
+    if receivable_amount(exc.legs) != 0:
+        return None
+    return (
+        f"{ref}: {how} but not booked -- the receivable side is zero, so the receivable leg's own "
+        f"amount books nothing; {next_step}"
+    )
+
+
+def _against_itself(ref: str, elim: Elimination) -> str | None:
+    """A reason not to book an entry that debits and credits the same entity.
+
+    That's what a `self_dealing` balance produces when both of its legs, or the
+    one leg and the counterparty it names, are the same entity: balanced,
+    eliminating nothing, and hiding the mapping error the exception exists to
+    show (docs/human-in-the-loop.md). An approval can't make it a real
+    elimination, so the item stays unbooked with the reason.
+    """
+    entities = {line.entity_code for line in elim.lines}
+    if len(entities) > 1:
+        return None
+    return (
+        f"{ref}: approved but not booked -- the entry would debit and credit {entities.pop()} itself, "
+        f"which eliminates nothing; needs the mapping corrected and manual resolution"
+    )
 
 
 def finalize(state: CloseState) -> dict:
@@ -200,6 +248,10 @@ def finalize(state: CloseState) -> dict:
         triage_result = triage_by_reference[ref]
 
         if triage_result.classification == TriageClassification.AUTO_RESOLVABLE:
+            reason = _unbookable_at_zero(ref, exc, "auto-resolvable by triage", "needs follow-up outside this run")
+            if reason:
+                notes.append(reason)
+                continue
             elim = build_elimination_from_exception(exc, note="auto-resolved by triage")
             eliminations.append(elim)
             notes.extend(_residual_notes(ref, exc, elim))
@@ -263,16 +315,31 @@ def finalize(state: CloseState) -> dict:
                 f"or manual resolution"
             )
         elif len(exc.legs) == 2:
+            reason = (
+                None
+                if decision.override_amount is not None
+                else _unbookable_at_zero(ref, exc, "approved", "needs an edit with the amount to book")
+            )
+            if reason:
+                notes.append(reason)
+                continue
             elim = build_elimination_from_exception(exc, note=note, override_amount=decision.override_amount)
+            reason = _against_itself(ref, elim)
+            if reason:
+                notes.append(reason)
+                continue
             eliminations.append(elim)
             notes.extend(_residual_notes(ref, exc, elim))
         elif len(exc.legs) == 1 and decision.override_amount is not None:
             # MISSING_COUNTERPARTY: there's no second system leg to derive an
             # amount from, so an approval only produces an elimination when
             # the reviewer supplied the amount to book.
-            eliminations.append(
-                build_elimination_from_known_leg(exc.legs[0], decision.override_amount, note=note)
-            )
+            elim = build_elimination_from_known_leg(exc.legs[0], decision.override_amount, note=note)
+            reason = _against_itself(ref, elim)
+            if reason:
+                notes.append(reason)
+                continue
+            eliminations.append(elim)
         else:
             # DUPLICATE_REFERENCE (or a MISSING_COUNTERPARTY approved with no
             # amount supplied) -- out of scope for this project's automated

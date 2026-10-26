@@ -87,6 +87,21 @@ def _style(sheet: Worksheet, columns: list[str]) -> None:
                 cell.number_format = "yyyy-mm-dd hh:mm:ss"
 
 
+def _keep_text_as_text(sheet: Worksheet) -> None:
+    """Store every text cell as text, including one that starts with "=".
+
+    openpyxl writes a string that starts with "=" as a formula, and Excel then
+    shows what the formula computes -- or calls out, for HYPERLINK or
+    WEBSERVICE -- instead of what was typed. A reviewer's note, a name or a
+    ledger description can start that way, and this is evidence: it has to
+    read exactly as the run recorded it.
+    """
+    for row in sheet.iter_rows():
+        for cell in row:
+            if isinstance(cell.value, str) and cell.data_type == "f":
+                cell.data_type = "s"
+
+
 def _csv_sheet(workbook: Workbook, name: str, text: str) -> None:
     reader = csv.reader(io.StringIO(text))
     columns = next(reader)
@@ -94,6 +109,7 @@ def _csv_sheet(workbook: Workbook, name: str, text: str) -> None:
     sheet.append(columns)
     for row in reader:
         sheet.append([_typed(column, value) for column, value in zip(columns, row, strict=True)])
+    _keep_text_as_text(sheet)
     _style(sheet, columns)
 
 
@@ -118,6 +134,7 @@ def _run_sheet(workbook: Workbook, run: dict) -> None:
     sheet.append(["field", "value"])
     for field, value in rows:
         sheet.append([field, value])
+    _keep_text_as_text(sheet)
 
     for cell in sheet[1]:
         cell.font = Font(bold=True)

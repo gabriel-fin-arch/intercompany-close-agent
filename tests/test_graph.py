@@ -636,3 +636,66 @@ def test_the_tolerance_floor_moves_the_tie_out_and_the_matching_together(monkeyp
     assert all(v.within_tolerance for v in result["tb_variances"])
     assert "LOAN-INT-2025-1019" in {a.reference for a, _ in result["clean_pairs"]}
     assert "LOAN-INT-2025-1019" not in {e.reference for e in result["exceptions"]}
+
+
+def _close_two_entities(monkeypatch, legs: list[tuple[str, str, str, str]], thread: str, decide=None):
+    """A close of two made-up entities on the given legs, resumed with decide(item) if it pauses."""
+    from datetime import date
+
+    from intercompany_close_agent.models.entity import Entity
+    from intercompany_close_agent.models.ledger import ICTransaction
+
+    _offline(monkeypatch)
+    entities = [Entity(code=code, name=code, region="US", local_currency="USD") for code in ("A", "B")]
+    transactions = [
+        ICTransaction(
+            entity_code=entity,
+            counterparty_code=counterparty,
+            reference=reference,
+            amount=Decimal(amount),
+            transaction_date=date(2026, 9, 30),
+        )
+        for entity, counterparty, reference, amount in legs
+    ]
+    graph, config, result = run_close(transactions, [], entities, thread_id=thread, prepared_by=PREPARER)
+    if "__interrupt__" in result and decide:
+        result = resume_close(graph, config, [decide(item) for item in _pending(result)])
+    return result
+
+
+def _approve(item: dict) -> dict:
+    return {"reference": item["reference"], "action": "approve", "reviewer": REVIEWER}
+
+
+@pytest.mark.parametrize("zero_first", [True, False])
+def test_a_clean_pair_with_a_zero_leg_closes_and_reports_what_it_leaves(monkeypatch, zero_first: bool):
+    """One leg at zero and the other inside the tolerance is a clean pair with
+    nothing to eliminate on the receivable side. It used to crash the whole
+    close when the zero came second, and leave the payable unreported when it
+    came first."""
+    legs = [("A", "B", "Z", "0.00"), ("B", "A", "Z", "-0.50")]
+    result = _close_two_entities(monkeypatch, legs if zero_first else legs[::-1], f"zero-{zero_first}")
+
+    assert result["eliminations"] == []
+    assert any("Z: matched within tolerance" in entry and "B's control account keeps -0.50" in entry
+               for entry in result["audit_trail"])
+
+
+def test_an_approved_mismatch_with_a_zero_receivable_is_not_booked_at_zero(monkeypatch):
+    legs = [("A", "B", "Z", "0.00"), ("B", "A", "Z", "-6000.00")]
+    result = _close_two_entities(monkeypatch, legs, "zero-approve", _approve)
+
+    assert result["eliminations"] == []
+    assert any("Z: approved but not booked" in entry and "receivable side is zero" in entry
+               for entry in result["audit_trail"])
+
+
+def test_an_approved_self_dealing_entry_against_one_entity_is_not_booked(monkeypatch):
+    """Both legs booked by A against A: approving it would debit and credit A,
+    the entry docs/human-in-the-loop.md names as this exception's danger."""
+    legs = [("A", "A", "S", "500.00"), ("A", "A", "S", "-500.00")]
+    result = _close_two_entities(monkeypatch, legs, "self", _approve)
+
+    assert result["eliminations"] == []
+    assert any("S: approved but not booked" in entry and "debit and credit A itself" in entry
+               for entry in result["audit_trail"])
