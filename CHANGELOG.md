@@ -5,6 +5,13 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Changed
+- `uv.lock` is in the repo. It pins every dependency at the versions CI
+  tests; CI installs with `--locked`, as do the Pages build and the Docker
+  image, so a new release upstream can't change what a clone, the demo or
+  the image runs until the lock is updated on purpose, and a lock that no
+  longer matches `pyproject.toml` fails the build. The lowest-versions job
+  still resolves afresh, to test the floors. The large-files hook skips the
+  lock, which is generated.
 - The first-screen recording (`docs/img/demo.gif`, now six frames and 30 s)
   ends with the Excel evidence from the close it just finalized: the real
   `close.xlsx`'s `run` sheet and the start of `tieout`, read from the workbook

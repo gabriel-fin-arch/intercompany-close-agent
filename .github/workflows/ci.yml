@@ -17,8 +17,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      # The versions in uv.lock, exactly; --locked fails the job if the lock
+      # no longer matches pyproject, rather than quietly resolving new ones.
       - name: Install dependencies
-        run: uv sync --extra dev
+        run: uv sync --locked --extra dev
 
       # ruff and the rest of .pre-commit-config.yaml, on every file, so the
       # hooks a contributor runs and the checks CI runs are the same list.
@@ -92,6 +94,8 @@ jobs:
           python-version: "3.11"
 
       - name: Install the lowest versions pyproject allows
+        # Resolves afresh, ignoring uv.lock: the floors are a different set of
+        # versions from the pinned one, and this job is the only one that tests them.
         run: uv sync --extra dev --resolution lowest-direct
 
       - name: Test

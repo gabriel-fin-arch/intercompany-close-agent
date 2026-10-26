@@ -12,6 +12,9 @@ repos:
       - id: check-toml
       - id: check-merge-conflict
       - id: check-added-large-files
+        # uv.lock is generated and grows with the dependency tree; it's the
+        # one large file that belongs in the repo.
+        exclude: ^uv\.lock$
 
   - repo: local
     hooks:
