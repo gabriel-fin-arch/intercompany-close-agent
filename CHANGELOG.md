@@ -2,6 +2,15 @@
 
 All notable changes to this project are logged here.
 
+## [Unreleased]
+
+### Changed
+- The first-screen recording (`docs/img/demo.gif`, now six frames and 30 s)
+  ends with the Excel evidence from the close it just finalized: the real
+  `close.xlsx`'s `run` sheet and the start of `tieout`, read from the workbook
+  rather than recreated from hard-coded values. The README describes the new
+  frame and what the workbook shows.
+
 ## [0.3.0] - 2026-10-26
 
 ### Added
