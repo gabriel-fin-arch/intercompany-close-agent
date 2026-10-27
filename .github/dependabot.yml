@@ -1,0 +1,21 @@
+# Dependabot proposes updates to uv.lock as pull requests: once a month, all
+# of them grouped into one, so the pinned versions don't quietly fall behind.
+# It changes the lock only, never the floors in pyproject.toml, which are what
+# the lowest-versions CI job tests. Each update is an ordinary pull request:
+# CI runs on it, and it is reviewed and merged by hand like any other change.
+# Security alerts are on in the repository settings; automatic security-update
+# pull requests are not.
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    versioning-strategy: "lockfile-only"
+    open-pull-requests-limit: 1
+    groups:
+      dependencies:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "deps"

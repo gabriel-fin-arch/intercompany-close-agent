@@ -5,6 +5,10 @@ All notable changes to this project are logged here.
 ## [Unreleased]
 
 ### Changed
+- Dependabot proposes updates to `uv.lock` (`.github/dependabot.yml`): once a
+  month, grouped into one pull request, the lock only, so the floors in
+  `pyproject.toml` stay what the lowest-versions job tests. Each update goes
+  through CI and is reviewed and merged by hand.
 - `uv.lock` is in the repo. It pins every dependency at the versions CI
   tests; CI installs with `--locked`, as do the Pages build and the Docker
   image, so a new release upstream can't change what a clone, the demo or
