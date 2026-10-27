@@ -49,9 +49,19 @@ def parse_override_amount(raw: str | None) -> Decimal | None:
         amount = Decimal(raw.strip())
     except InvalidOperation as exc:
         raise ValueError(f"amount must be a number, e.g. 1234.56 (got {raw!r})") from exc
+    # Decimal reads "NaN" and "Infinity" as numbers. NaN can't even be compared
+    # with zero, and an infinite amount fails ReviewDecision inside the resume,
+    # the crash this function exists to prevent.
+    if not amount.is_finite():
+        raise ValueError(f"amount must be a number, e.g. 1234.56 (got {raw!r})")
     if amount <= 0:
         raise ValueError(f"amount must be a positive number (got {amount})")
-    return amount
+    # The journal books cents. A third decimal would be rounded away on export,
+    # so the entry in the run and the line in the file would disagree.
+    cents = amount.quantize(Decimal("0.01"))
+    if cents != amount:
+        raise ValueError(f"amount can't have more than two decimal places (got {raw.strip()!r})")
+    return cents
 
 
 class ReviewAction(StrEnum):

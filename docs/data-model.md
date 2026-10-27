@@ -17,7 +17,11 @@ re-keying slips creep in (see `data/synthetic/README.md`).
 **`TrialBalanceLine`** / **`ICTransaction`** (`models/ledger.py`) -- the
 two feeds the pipeline ingests. An `ICTransaction` is one *leg* of an
 intercompany balance, as booked by a single entity; a clean balance has
-exactly two legs (one per side) that net to zero.
+exactly two legs (one per side) that net to zero. Both feeds are in the group
+reporting currency (USD): the tie-out compares an entity's trial balance
+control accounts with its ledger legs directly, so a trial balance in local
+currency would show every non-USD entity as a break. Translating one is
+outside this project.
 
 ## Reconciliation output
 

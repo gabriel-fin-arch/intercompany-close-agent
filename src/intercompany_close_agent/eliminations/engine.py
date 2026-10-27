@@ -47,7 +47,22 @@ def _receivable_and_payable(leg_a: ICTransaction, leg_b: ICTransaction) -> tuple
             f"cannot tell receivable from payable for {leg_a.reference}: both legs are "
             f"{'positive' if leg_a.amount > 0 else 'negative'} ({leg_a.amount}, {leg_b.amount})"
         )
-    return (leg_a, leg_b) if leg_a.amount > 0 else (leg_b, leg_a)
+    # Sorted on whichever leg has a sign. A leg booked at zero says nothing
+    # about direction, so a positive leg is the receivable and a negative one
+    # the payable, wherever the zero sits; sorting on the first leg alone put
+    # a negative leg on the receivable side when the zero came first.
+    return (leg_a, leg_b) if leg_a.amount > 0 or leg_b.amount < 0 else (leg_b, leg_a)
+
+
+def receivable_amount(legs: list[ICTransaction]) -> Decimal:
+    """What an elimination of these two legs books by default: the receivable leg's own amount.
+
+    Zero when the entity on the receivable side booked nothing, and then there
+    is nothing to book at that amount -- callers leave the balance unbooked
+    with a reason rather than post an entry for zero.
+    """
+    receivable_leg, _ = _receivable_and_payable(legs[0], legs[1])
+    return abs(receivable_leg.amount)
 
 
 def _elimination_lines(payable_entity: str, receivable_entity: str, amount: Decimal) -> list[JournalLine]:
@@ -93,10 +108,12 @@ def build_elimination(pair: tuple[ICTransaction, ICTransaction]) -> Elimination:
 def build_eliminations(pairs: list[tuple[ICTransaction, ICTransaction]]) -> list[Elimination]:
     """Build eliminations for every matched pair that has something to eliminate.
 
-    A pair that nets to zero on both legs is already gone at group level --
-    posting a zero-value entry for it would balance perfectly and say nothing.
+    A pair whose receivable side is zero has nothing to eliminate at that
+    amount -- posting a zero-value entry would balance perfectly and say
+    nothing, and `JournalLine` refuses it. If the payable side isn't zero
+    too, what it leaves standing is reported by `graph/nodes.py::finalize`.
     """
-    return [build_elimination(pair) for pair in pairs if abs(pair[0].amount) > 0]
+    return [build_elimination(pair) for pair in pairs if receivable_amount(list(pair)) > 0]
 
 
 def elimination_residuals(legs: list[ICTransaction], elimination: Elimination) -> list[tuple[str, Decimal]]:

@@ -28,3 +28,23 @@ def test_unparseable_amount_raises_a_clear_error(bad):
 def test_non_positive_amount_is_rejected(bad):
     with pytest.raises(ValueError, match="must be a positive number"):
         parse_override_amount(bad)
+
+
+@pytest.mark.parametrize("bad", ["NaN", "nan", "sNaN", "Infinity", "-Infinity", "inf"])
+def test_not_a_number_and_infinity_are_rejected_as_not_numbers(bad):
+    """Decimal reads these as numbers; NaN used to escape as InvalidOperation
+    and Infinity to crash the resume the parser exists to protect."""
+    with pytest.raises(ValueError, match="must be a number"):
+        parse_override_amount(bad)
+
+
+@pytest.mark.parametrize("bad", ["0.001", "1e-9", "1234.567"])
+def test_an_amount_finer_than_a_cent_is_rejected(bad):
+    """The journal books cents, so a third decimal would be rounded away on export."""
+    with pytest.raises(ValueError, match="two decimal places"):
+        parse_override_amount(bad)
+
+
+def test_an_amount_comes_back_in_cents():
+    assert str(parse_override_amount("1e3")) == "1000.00"
+    assert str(parse_override_amount("1234.5")) == "1234.50"

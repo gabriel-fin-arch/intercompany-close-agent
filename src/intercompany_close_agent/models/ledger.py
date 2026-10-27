@@ -20,7 +20,13 @@ class TrialBalanceLine(BaseModel):
     entity_code: str
     account_code: str = Field(description="Group standard chart-of-accounts code, after COA mapping.")
     account_name: str
-    balance: Decimal = Field(description="Balance in the entity's local currency. Debit positive, credit negative.")
+    balance: Decimal = Field(
+        description=(
+            "Balance in the group reporting currency (USD), like the IC ledger amounts: the tie-out "
+            "compares the two directly, and nothing here translates from local currency. Debit "
+            "positive, credit negative."
+        )
+    )
 
 
 class ICTransaction(BaseModel):

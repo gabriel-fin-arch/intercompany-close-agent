@@ -12,6 +12,7 @@ from intercompany_close_agent.eliminations.engine import (
     build_elimination_from_exception,
     build_elimination_from_known_leg,
     build_eliminations,
+    receivable_amount,
 )
 from intercompany_close_agent.models.elimination import Elimination, JournalLine, JournalLineType
 from intercompany_close_agent.models.exception import ExceptionType, ICException, Materiality
@@ -310,3 +311,39 @@ def test_against_the_real_synthetic_dataset():
         debits = sum(line.amount for line in elim.lines if line.line_type == JournalLineType.DEBIT)
         credits = sum(line.amount for line in elim.lines if line.line_type == JournalLineType.CREDIT)
         assert debits == credits
+
+
+@pytest.mark.parametrize("zero_first", [True, False])
+def test_a_zero_leg_says_nothing_about_direction(zero_first: bool):
+    """With one leg at zero, the other leg's sign decides which side is which.
+
+    Sorting on the first leg alone put a negative leg on the receivable side
+    whenever the zero came first, and an edited amount was then booked the
+    wrong way round: the entity that owed got its receivable credited.
+    """
+    zero, payable = _leg("US01", "DE01", "REF-0", "0.00"), _leg("DE01", "US01", "REF-0", "-6000.00")
+    legs = [zero, payable] if zero_first else [payable, zero]
+    exc = ICException(
+        reference="REF-0",
+        exception_type=ExceptionType.AMOUNT_MISMATCH,
+        legs=legs,
+        net_amount=Decimal("-6000.00"),
+        materiality=Materiality.HIGH,
+        detected_reason="test",
+    )
+
+    elim = build_elimination_from_exception(exc, override_amount=Decimal("6000.00"))
+
+    debit = next(line for line in elim.lines if line.line_type is JournalLineType.DEBIT)
+    credit = next(line for line in elim.lines if line.line_type is JournalLineType.CREDIT)
+    assert (debit.entity_code, debit.account_code) == ("DE01", "IC_PAYABLE")
+    assert (credit.entity_code, credit.account_code) == ("US01", "IC_RECEIVABLE")
+    assert receivable_amount(legs) == 0
+
+
+@pytest.mark.parametrize("zero_first", [True, False])
+def test_a_clean_pair_with_a_zero_receivable_produces_no_entry_whatever_the_order(zero_first: bool):
+    zero, payable = _leg("US01", "DE01", "REF-Z1", "0.00"), _leg("DE01", "US01", "REF-Z1", "-0.50")
+    pair = (zero, payable) if zero_first else (payable, zero)
+
+    assert build_eliminations([pair]) == []

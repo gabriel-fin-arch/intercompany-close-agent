@@ -126,3 +126,34 @@ def test_a_written_pack_contains_the_workbook_and_zips_it(final_state: dict, tmp
     assert load_workbook(io.BytesIO(workbook_bytes)).sheetnames == ["run", *SHEETS]
     with zipfile.ZipFile(io.BytesIO(zip_pack(folder))) as archive:
         assert archive.read(f"{folder.name}/close.xlsx") == workbook_bytes
+
+
+def test_text_that_starts_like_a_formula_is_kept_as_text(monkeypatch):
+    """A reviewer's note that starts with "=" is evidence of what was typed.
+
+    openpyxl would store it as a formula, and Excel would show what it computes,
+    or call out to a URL, instead of the note.
+    """
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    entities, trial_balance, transactions = load_dataset(DATA_DIR)
+    graph, config, result = run_close(
+        transactions, trial_balance, entities, thread_id="test-formula-text", prepared_by="=1+1"
+    )
+    note = '=HYPERLINK("https://example.invalid","open")'
+    final = resume_close(
+        graph,
+        config,
+        [
+            {"reference": item["reference"], "action": "reject", "reviewer": REVIEWER, "reviewer_note": note}
+            for item in result["__interrupt__"][0].value["pending_review"]
+        ],
+    )
+
+    book = load_workbook(io.BytesIO(close_xlsx(pack_files(final, DATA_DIR))))
+    cells = [cell for sheet in book.worksheets for row in sheet.iter_rows() for cell in row]
+    formula_like = [cell for cell in cells if isinstance(cell.value, str) and cell.value.startswith("=")]
+
+    assert any(cell.value == note for cell in formula_like)
+    assert any(cell.value == "=1+1" for cell in formula_like)
+    assert all(cell.data_type == "s" for cell in formula_like)
