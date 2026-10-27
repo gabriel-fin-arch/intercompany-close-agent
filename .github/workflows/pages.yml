@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Build the page from the committed sample data
-        run: uv run python -m intercompany_close_agent.cli report --out site
+        run: uv run --locked python -m intercompany_close_agent.cli report --out site
 
       - uses: actions/configure-pages@v6
 

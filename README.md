@@ -59,6 +59,8 @@ file: the evidence pack comes from the dashboard, once every item on the
 worklist has a decision. The same steps one at a time (without a key, triage falls back to the offline rules):
 
 ```
+# the versions pinned in uv.lock, the ones CI tests (after editing
+# pyproject.toml, `uv lock` updates the pins)
 uv sync --extra dev
 
 # regenerate the synthetic dataset (optional -- a sample is already committed)
