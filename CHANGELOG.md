@@ -2,7 +2,7 @@
 
 All notable changes to this project are logged here.
 
-## [Unreleased]
+## [0.4.0] - 2026-10-27
 
 ### Changed
 - Dependabot proposes updates to `uv.lock` (`.github/dependabot.yml`): once a

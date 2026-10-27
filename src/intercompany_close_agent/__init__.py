@@ -5,4 +5,4 @@ consolidation close: matches counterparty bookings, proposes elimination
 entries, and routes anything that needs judgment to a human reviewer.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
