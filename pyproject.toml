@@ -39,6 +39,9 @@ dev = [
     "mypy>=1.11",
     "pre-commit>=4.4",
     "types-openpyxl>=3.1",
+    # Runs recalc/ic_recalc.sql for the reconciliation check (recalc_check.py);
+    # 1.1 is the oldest the SQL was run on and gives the same figures.
+    "duckdb>=1.1",
 ]
 
 [build-system]
