@@ -14,10 +14,14 @@ CREATE OR REPLACE TABLE entities AS
     SELECT * FROM read_csv('data/synthetic/entities.csv', header = true);
 
 CREATE OR REPLACE TABLE trial_balance AS
-    SELECT * FROM read_csv('data/synthetic/trial_balance.csv', header = true);
+    SELECT * FROM read_csv('data/synthetic/trial_balance.csv', header = true,
+        types = {'balance': 'DECIMAL(18,2)'});
 
+-- amount and balance load as fixed-point decimal, not DOUBLE: at the 1.00
+-- tolerance boundary the two can disagree (raised in review on PR #55).
 CREATE OR REPLACE TABLE ic_ledger AS
-    SELECT * FROM read_csv('data/synthetic/ic_ledger.csv', header = true);
+    SELECT * FROM read_csv('data/synthetic/ic_ledger.csv', header = true,
+        types = {'amount': 'DECIMAL(18,2)'});
 
 -- ---------------------------------------------------------------------------
 -- 1. Tie-out per entity: subledger vs control accounts in the trial balance
@@ -45,15 +49,17 @@ tb_totals AS (
     WHERE account_code IN ('1000-IC-REC', '2000-IC-PAY')
     GROUP BY entity_code
 )
+-- full outer join, not inner: an entity on only one side must still show up
+-- as a break (raised in review on PR #55). Missing side counts as zero.
 SELECT
-    t.entity_code,
-    l.ledger_total,
-    t.tb_total,
-    round(l.ledger_total - t.tb_total, 2) AS variance,
-    abs(l.ledger_total - t.tb_total) > 1.00 AS is_break
+    entity_code,
+    coalesce(l.ledger_total, 0) AS ledger_total,
+    coalesce(t.tb_total, 0) AS tb_total,
+    round(coalesce(l.ledger_total, 0) - coalesce(t.tb_total, 0), 2) AS variance,
+    abs(coalesce(l.ledger_total, 0) - coalesce(t.tb_total, 0)) > 1.00 AS is_break
 FROM tb_totals t
-JOIN ledger_totals l USING (entity_code)
-ORDER BY t.entity_code;
+FULL OUTER JOIN ledger_totals l USING (entity_code)
+ORDER BY entity_code;
 
 -- ---------------------------------------------------------------------------
 -- 2. Match the legs into pairs, one reference at a time
@@ -96,25 +102,38 @@ FROM numbered
 GROUP BY reference;
 
 CREATE OR REPLACE VIEW recalc_pairs AS
+WITH classified AS (
+    SELECT
+        reference,
+        CASE
+            WHEN self_dealing = 1 THEN 'self_dealing'
+            WHEN n_legs = 1 THEN 'missing_counterparty'
+            WHEN n_legs > 2 THEN 'duplicate_reference'
+            -- rule 4: the two legs must point at each other; a blank
+            -- counterparty is a mismatch too, not a silent clean pass
+            -- (raised in review on PR #55)
+            WHEN c1 IS NULL OR c2 IS NULL OR e1 <> c2 OR e2 <> c1
+                THEN 'counterparty_mismatch'
+            WHEN cur1 IS NULL OR cur2 IS NULL OR cur1 <> cur2
+                THEN 'currency_mismatch'
+            -- rule 6: both legs the same sign, and neither is zero
+            WHEN (a1 > 0 AND a2 > 0) OR (a1 < 0 AND a2 < 0) THEN 'sign_mismatch'
+            -- rule 7: tolerance is the bigger of 1.00 and 0.01 % of the larger leg
+            WHEN abs(a1 + a2) > greatest(1.00, 0.0001 * greatest(abs(a1), abs(a2)))
+                THEN 'amount_mismatch'
+            -- rule 8: booked in different months
+            WHEN date_trunc('month', d1) <> date_trunc('month', d2) THEN 'timing_gap'
+            ELSE 'clean'
+        END AS exception_type
+    FROM recalc_pair_legs
+)
 SELECT
     reference,
-    CASE
-        WHEN self_dealing = 1 THEN 'self_dealing'
-        WHEN n_legs = 1 THEN 'missing_counterparty'
-        WHEN n_legs > 2 THEN 'duplicate_reference'
-        -- rule 4: the two legs must point at each other
-        WHEN e1 <> c2 OR e2 <> c1 THEN 'counterparty_mismatch'
-        WHEN cur1 <> cur2 THEN 'currency_mismatch'
-        -- rule 6: both legs the same sign, and neither is zero
-        WHEN (a1 > 0 AND a2 > 0) OR (a1 < 0 AND a2 < 0) THEN 'sign_mismatch'
-        -- rule 7: tolerance is the bigger of 1.00 and 0.01 % of the larger leg
-        WHEN abs(a1 + a2) > greatest(1.00, 0.0001 * greatest(abs(a1), abs(a2)))
-            THEN 'amount_mismatch'
-        -- rule 8: booked in different months
-        WHEN date_trunc('month', d1) <> date_trunc('month', d2) THEN 'timing_gap'
-        ELSE 'clean'
-    END AS outcome
-FROM recalc_pair_legs
+    -- the contract in #54: outcome is clean / exception at this level;
+    -- the specific type rides along in its own column
+    CASE WHEN exception_type = 'clean' THEN 'clean' ELSE 'exception' END AS outcome,
+    CASE WHEN exception_type = 'clean' THEN NULL ELSE exception_type END AS exception_type
+FROM classified
 ORDER BY reference;
 
 -- ---------------------------------------------------------------------------
