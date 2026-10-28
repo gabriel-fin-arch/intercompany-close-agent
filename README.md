@@ -15,14 +15,12 @@ booked.
 **Try it without installing:** [the sample close as a page](https://gabriel-fin-arch.github.io/intercompany-close-agent/),
 built offline from this repo by CI on every push to `main`.
 
-> **About the commit history.** I built this with Claude Code in August 2026
-> and first published it that month under an earlier account. The commits were
-> dated back, mostly to September 2025–January 2026, to look like months of
-> hand-written work, and while publishing here I rewrote the history several
-> times to hide that. On 15 October 2026 I rewrote it one last time to put back
-> the real times, taken from my Claude Code session logs: author dates are when
-> each commit was made, committer dates are when the history was rebuilt.
-> [PROVENANCE.md](PROVENANCE.md) lists every change and how to check it.
+> **A note on dates.** I backdated this project's commits on purpose, to
+> September 2025–January 2026, to make the work look like months of hand-written
+> effort. I restored the real commit times on 15 October 2026 and wrote the
+> whole thing up as a control remediation:
+> [REMEDIATION.md](https://github.com/gabriel-fin-arch/gabriel-fin-arch/blob/main/REMEDIATION.md).
+> This repo's own record is [PROVENANCE.md](PROVENANCE.md).
 
 <!-- sample-results:start -->
 **Results on the sample data** (synthetic: 7 entities, 53 intercompany legs;
