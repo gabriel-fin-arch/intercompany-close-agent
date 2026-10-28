@@ -34,6 +34,11 @@ the tests rerun the close offline and fail if these figures change):
   plants on purpose.
 <!-- sample-results:end -->
 
+The tie-out, the clean pairs and the exceptions above, types included, and the
+amount the clean pairs eliminate are recomputed independently by the accountant
+in plain SQL ([`recalc/`](recalc/)), and CI fails if the two disagree. Triage's
+split is not part of that recalculation.
+
 ![Recording of the sample close: the demo output, the reviewer dashboard, the finalized close and its evidence pack, and the run and tie-out sheets from close.xlsx](docs/img/demo.gif)
 
 *Frame by frame: the `demo` command's output, drawn as text; the dashboard before the run, with the preparer
