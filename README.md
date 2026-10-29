@@ -2,25 +2,19 @@
 
 [![CI](https://github.com/gabriel-fin-arch/intercompany-close-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/gabriel-fin-arch/intercompany-close-agent/actions/workflows/ci.yml)
 
-An agent-first assistant for the intercompany leg of a multi-entity group
-consolidation close: it matches counterparty bookings, proposes elimination
-journal entries with a rationale, and routes anything that genuinely needs
-a person's judgment to a human reviewer instead of guessing.
+**What it does.** The intercompany step of a group's month-end close: it ties
+each entity's intercompany ledger to its trial balance, matches the two sides
+of every intercompany balance, drafts the elimination entries, and sends
+whatever needs a person's judgment to a reviewer instead of guessing. It runs
+on a synthetic group of seven entities, offline by default. With a Claude API
+key triage uses the model, but every amount in an elimination entry is still
+computed by the same deterministic, tested code
+([ADR 0001](docs/adr/0001-deterministic-figures-model-classifies.md)).
 
-Built against a synthetic dataset (seven fictional entities, none real) so
-it's safe to run and inspect end to end. Runs fully offline by default. A
-Claude API key upgrades the triage narrative; it doesn't change what gets
-booked.
-
-**Try it without installing:** [the sample close as a page](https://gabriel-fin-arch.github.io/intercompany-close-agent/),
-built offline from this repo by CI on every push to `main`.
-
-> **A note on dates.** I backdated this project's commits on purpose, to
-> September 2025–January 2026, to make the work look like months of hand-written
-> effort. I restored the real commit times on 15 October 2026 and wrote the
-> whole thing up as a control remediation:
-> [REMEDIATION.md](https://github.com/gabriel-fin-arch/gabriel-fin-arch/blob/main/REMEDIATION.md).
-> This repo's own record is [PROVENANCE.md](PROVENANCE.md).
+**See it run:** [the sample close as a page](https://gabriel-fin-arch.github.io/intercompany-close-agent/),
+built by CI from `main`, or `uv run python -m intercompany_close_agent.cli demo`
+from a clone, with no key.
+<!-- VIDEO: Gabriel adds the link to his recorded walkthrough here. -->
 
 <!-- sample-results:start -->
 **Results on the sample data** (synthetic: 7 entities, 53 intercompany legs;
@@ -38,6 +32,24 @@ The tie-out, the clean pairs and the exceptions above, types included, and the
 amount the clean pairs eliminate are recomputed independently by the accountant
 in plain SQL ([`recalc/`](recalc/)), and CI fails if the two disagree. Triage's
 split is not part of that recalculation.
+
+**Who built what**
+
+| What | Who | Where to check |
+|---|---|---|
+| The pipeline (tie-out, matching, eliminations, triage, reviewer dashboard, journal export) and its tests | Claude Code | [PROVENANCE.md](PROVENANCE.md); since 15 October 2026, a `Co-Authored-By: Claude` line on each of its commits |
+| The demos: the `demo` command, the page above, the recording below | Claude Code | [#34](https://github.com/gabriel-fin-arch/intercompany-close-agent/pull/34), [#36](https://github.com/gabriel-fin-arch/intercompany-close-agent/pull/36), [#37](https://github.com/gabriel-fin-arch/intercompany-close-agent/pull/37) |
+| CI, including the job that reconciles `recalc/` with the pipeline | Claude Code | [`.github/workflows/`](.github/workflows/), [#60](https://github.com/gabriel-fin-arch/intercompany-close-agent/pull/60) |
+| The independent recalculation of the sample close, in SQL | Gabriel | [`recalc/`](recalc/), [#55](https://github.com/gabriel-fin-arch/intercompany-close-agent/pull/55), [#57](https://github.com/gabriel-fin-arch/intercompany-close-agent/pull/57) |
+| The independent recalculation of three contracts, in Excel, and the ASC 606 walkthrough of Calderwood 2025 with a call on each of its eight judgments | Gabriel | [revrec-contract-reviewer#58](https://github.com/gabriel-fin-arch/revrec-contract-reviewer/pull/58) |
+| The accounting decisions on record as his: ADRs 0001, 0004, 0005 and 0007, the recalculation's scope, and revrec's gold corrections | Gabriel | [`docs/adr/`](docs/adr/), [#54](https://github.com/gabriel-fin-arch/intercompany-close-agent/issues/54), [revrec #27](https://github.com/gabriel-fin-arch/revrec-contract-reviewer/pull/27) and [#28](https://github.com/gabriel-fin-arch/revrec-contract-reviewer/pull/28) |
+
+> **A note on dates.** I backdated this project's commits on purpose, to
+> September 2025–January 2026, to make the work look like months of hand-written
+> effort. I restored the real commit times on 15 October 2026 and wrote the
+> whole thing up as a control remediation:
+> [REMEDIATION.md](https://github.com/gabriel-fin-arch/gabriel-fin-arch/blob/main/REMEDIATION.md).
+> This repo's own record is [PROVENANCE.md](PROVENANCE.md).
 
 ![Recording of the sample close: the demo output, the reviewer dashboard, the finalized close and its evidence pack, and the run and tie-out sheets from close.xlsx](docs/img/demo.gif)
 
