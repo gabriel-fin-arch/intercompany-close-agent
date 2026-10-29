@@ -1,0 +1,38 @@
+# What the provenance check (src/intercompany_close_agent/provenance_check.py)
+# holds the published history to. Facts only, each one checkable with git.
+
+[history]
+# The first commit, 5 August 2026 09:47:49 UTC: "init project scaffolding".
+first_commit = "a4e10889178e57e7faae9d5b7e48ad31ad5fae1f"
+# The tip of main once the real dates were put back on 15 October 2026,
+# 14:19:58 UTC: "docs: restore the real commit dates, and say how".
+# PROVENANCE.md, "Restoring the real dates", says how it was done.
+restored = "2950da9e9378b04bedd77df7b8f63e9c3039ddd2"
+
+# Commit counts published about the history: from (included) to (excluded),
+# by author date in UTC. "What happened" in PROVENANCE.md gives all four;
+# REMEDIATION.md, in the profile repository, the first.
+
+[[published]]
+claim = "69 commits on 5 August 2026."
+from = 2026-08-05T00:00:00Z
+to = 2026-08-06T00:00:00Z
+commits = 69
+
+[[published]]
+claim = "3 commits on 6 August 2026."
+from = 2026-08-06T00:00:00Z
+to = 2026-08-07T00:00:00Z
+commits = 3
+
+[[published]]
+claim = "8 commits on 10 August 2026."
+from = 2026-08-10T00:00:00Z
+to = 2026-08-11T00:00:00Z
+commits = 8
+
+[[published]]
+claim = "9 commits on 13 August 2026."
+from = 2026-08-13T00:00:00Z
+to = 2026-08-14T00:00:00Z
+commits = 9

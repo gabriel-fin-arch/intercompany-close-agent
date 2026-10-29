@@ -74,6 +74,29 @@ jobs:
         shell: bash
         run: uv run python -m intercompany_close_agent.recalc_check | tee -a "$GITHUB_STEP_SUMMARY"
 
+  provenance:
+    # The published history against the real dates on record
+    # (.github/provenance.toml). Fails on a rewrite of the history restored on
+    # 15 October 2026, a second first commit, a commit dated before that
+    # restoration or in the future, a published commit count the history no
+    # longer shows, and, on a push, a previous tip the new history doesn't
+    # contain. It only reads.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The whole history, not just the last commit.
+          fetch-depth: 0
+
+      - name: Check the history against the dates on record
+        # An explicit bash runs with -o pipefail, so a failing check isn't
+        # hidden behind tee's exit status.
+        shell: bash
+        env:
+          # The branch's tip before a push; empty on a pull request.
+          PREVIOUS: ${{ github.event.before }}
+        run: python3 src/intercompany_close_agent/provenance_check.py --previous "$PREVIOUS" | tee -a "$GITHUB_STEP_SUMMARY"
+
   container:
     # The image a reviewer can run without Python or uv: built from this
     # commit, the offline close run in it, and the dashboard started from it

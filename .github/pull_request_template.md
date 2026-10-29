@@ -25,7 +25,7 @@ when I review. -->
       no tracked file changed
 - [ ] No call to the Anthropic API, or the call, its cost estimate and my
       approval are noted here
-- [ ] CI green on this PR, in all four jobs (`test`, `recalc`, `container`
-      and `lowest-versions`)
+- [ ] CI green on this PR, in all five jobs (`test`, `recalc`, `provenance`,
+      `container` and `lowest-versions`)
 - [ ] Every number or claim in the changed text checked against the output it
       comes from
