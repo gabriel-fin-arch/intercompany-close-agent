@@ -51,6 +51,29 @@ jobs:
           uv run python -m intercompany_close_agent.cli triage-eval --set labelled
           uv run python -m intercompany_close_agent.cli triage-eval --set adversarial
 
+  recalc:
+    # recalc/ic_recalc.sql is the accountant's own recalculation of the sample
+    # close, in plain SQL (recalc/README.md). This runs it and the offline
+    # pipeline on the same CSVs and fails on any difference in the tie-out, the
+    # matching or the eliminated total; the job summary shows both sides.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Reconcile recalc/ against the pipeline
+        # An explicit bash runs with -o pipefail, so a failing check isn't
+        # hidden behind tee's exit status.
+        shell: bash
+        run: uv run python -m intercompany_close_agent.recalc_check | tee -a "$GITHUB_STEP_SUMMARY"
+
   container:
     # The image a reviewer can run without Python or uv: built from this
     # commit, the offline close run in it, and the dashboard started from it
