@@ -5,6 +5,16 @@ alternatives considered, consequences. Each was drafted from a sketch by the
 project's owner and names its decision owner — his, or the assistant's that
 he accepted.
 
+> **When the project was built, and when these were written.** I designed
+> this project on 5 August 2026 and built it with Claude Code: the first
+> commit is from that day, as are 69 of the 89 commits made in August
+> ([PROVENANCE.md](../../PROVENANCE.md)). These records came afterwards.
+> Claude Code drafted them on 23 October 2026 from sketches I wrote, all in
+> one commit (`ef74c2d`), so the "Accepted, 23 October 2026" at the top of
+> each is the day the decision was written down, not the day it was taken.
+> Why the dates need a note at all:
+> [REMEDIATION.md](https://github.com/gabriel-fin-arch/gabriel-fin-arch/blob/main/REMEDIATION.md).
+
 | # | Decision | Decision owner |
 |---|---|---|
 | [0001](0001-deterministic-figures-model-classifies.md) | Figures are deterministic; the model only classifies and explains | Gabriel |
