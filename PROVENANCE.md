@@ -71,6 +71,12 @@ changed the commit. The honest fix was to say the dates were invented, which
 this file did from 14 October, and then to put the real ones back, which the
 last one did.
 
+From 19 November 2026 the "before" states also have permanent refs, so the
+evidence no longer depends on the Activity tab's window: the tags
+`archive/pre-remediation-1` through `archive/pre-remediation-5` point at
+`752a74b`, `40a9498`, `5215eda`, `fe83715` and `6e9001c` — the state of
+`main` before the force-push of the same row in the table above.
+
 ## What I said here that wasn't true
 
 | Commit | Where | What it said |

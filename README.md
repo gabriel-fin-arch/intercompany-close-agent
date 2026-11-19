@@ -45,7 +45,7 @@ split is not part of that recalculation.
 | The accounting decisions on record as his: ADRs 0001, 0004, 0005 and 0007, the recalculation's scope, and revrec's gold corrections | Gabriel | [`docs/adr/`](docs/adr/), [#54](https://github.com/gabriel-fin-arch/intercompany-close-agent/issues/54), [revrec #27](https://github.com/gabriel-fin-arch/revrec-contract-reviewer/pull/27) and [#28](https://github.com/gabriel-fin-arch/revrec-contract-reviewer/pull/28) |
 
 > **A note on dates.** I backdated this project's commits on purpose, to
-> September 2025–January 2026, to make the work look like months of hand-written
+> September 2025–February 2026, to make the work look like months of hand-written
 > effort. I restored the real commit times on 15 October 2026 and wrote the
 > whole thing up as a control remediation:
 > [REMEDIATION.md](https://github.com/gabriel-fin-arch/gabriel-fin-arch/blob/main/REMEDIATION.md).
